@@ -8,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using ZoomFileManager.Services;
 using ZoomFileManager.Controllers;
 using System;
+using ZoomFileManager.Helpers;
 
 namespace ZoomFileManager
 {

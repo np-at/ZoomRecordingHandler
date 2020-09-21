@@ -29,7 +29,8 @@ namespace ZoomFileManager.Controllers
         public IActionResult ReceiveNotification([FromBody] ZoomWebhookEvent webhookEvent, [FromServices] IServiceScopeFactory
                                     serviceScopeFactory, [FromHeader(Name = "Authorization")] string? authKey)
         {
-            _logger.LogDebug("Received Webhook");
+            string? remoteHost = HttpContext.Request.Host.ToString();
+            _logger.LogDebug($"Received Webhook from ${remoteHost}");
             if (_options?.Value?.AllowedTokens?.Contains(authKey) ?? false)
             {
                 try
@@ -55,7 +56,7 @@ namespace ZoomFileManager.Controllers
             }
             else
             {
-                _logger.LogWarning($"invalid auth token received");
+                _logger.LogWarning($"invalid auth token received from ${remoteHost}");
                 return new ForbidResult();
             }
 

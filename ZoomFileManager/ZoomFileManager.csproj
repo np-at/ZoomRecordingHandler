@@ -5,21 +5,33 @@
     <UserSecretsId>ba180e98-333d-45c2-ad6e-ae2bcee4677a</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <Nullable>enable</Nullable>
+    <Configurations>Debug;Release;ReleaseSelf</Configurations>
+    <Platforms>AnyCPU</Platforms>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
     <PlatformTarget>x64</PlatformTarget>
     <DebugSymbols>false</DebugSymbols>
-    <Optimize>true</Optimize>
     
     <DebugType>none</DebugType>
   </PropertyGroup>
-  <PropertyGroup>
-    <RuntimeIdentifiers>linux-musl-x64;win-x64</RuntimeIdentifiers>
+  <PropertyGroup Condition=" '$(Configuration)' == 'ReleaseSelf' ">
+	  <DockerfileFile>DockerfileSelfContained</DockerfileFile>
+    <RuntimeIdentifier>linux-musl-x64</RuntimeIdentifier>
+    <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+    <PlatformTarget>x64</PlatformTarget>
+    <DebugSymbols>false</DebugSymbols>
     <PublishTrimmed>true</PublishTrimmed>
-    <TrimMode>link</TrimMode>
-    
+    <Optimize>false</Optimize>
+    <PublishSingleFile>true</PublishSingleFile>
+    <CrossGenDuringPublish>false</CrossGenDuringPublish>
+
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <RuntimeIdentifiers>linux-musl-x64;win-x64</RuntimeIdentifiers>
+ 
   </PropertyGroup>
 
   <ItemGroup>
