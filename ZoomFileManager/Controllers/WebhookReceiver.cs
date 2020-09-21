@@ -31,7 +31,7 @@ namespace ZoomFileManager.Controllers
         {
             string? remoteHost = HttpContext.Request.Host.ToString();
             _logger.LogDebug($"Received Webhook from ${remoteHost}");
-            if (_options?.Value?.AllowedTokens?.Contains(authKey) ?? false)
+            if (!string.IsNullOrWhiteSpace(authKey) && (_options?.Value?.AllowedTokens?.Contains(authKey) ?? false))
             {
                 try
                 {

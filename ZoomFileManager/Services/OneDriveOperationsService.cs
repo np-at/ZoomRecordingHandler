@@ -1,16 +1,17 @@
-﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Microsoft.Graph;
-using Microsoft.Graph.Auth;
-using Microsoft.Identity.Client;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Microsoft.Graph;
+using Microsoft.Graph.Auth;
+using Microsoft.Identity.Client;
+using File = System.IO.File;
 using FileSystemInfo = System.IO.FileSystemInfo;
 
 namespace ZoomFileManager.Services
@@ -23,6 +24,7 @@ namespace ZoomFileManager.Services
 
         Task DeleteFileAsync();
     }
+
     public class OneDriveOperationsService : IOneDriveOperationsService
     {
         private readonly ILogger<OneDriveOperationsService> _logger;
@@ -30,7 +32,7 @@ namespace ZoomFileManager.Services
 
         public OneDriveOperationsService(ILogger<OneDriveOperationsService> logger)
         {
-            this._logger = logger;
+            _logger = logger;
         }
 
         public Task DeleteFileAsync()
@@ -48,55 +50,58 @@ namespace ZoomFileManager.Services
             throw new NotImplementedException();
         }
     }
+
     public class OdruOptions
     {
         public string ClientId { get; set; }
         public string ClientSecret { get; set; }
         public string TenantId { get; set; }
         public string? UserName { get; set; }
+
+        public string? RootDirectory { get; set; }
     }
+
     internal partial class Odru
     {
-
-        internal  string _userName;
-        internal FileInfo? _file;
-        private GraphServiceClient? _gs;
-        internal User _user = null!;
-        internal string? _uploadPath = "Uploads";
-        internal bool _enumerateFiles = false;
+        private readonly bool _enumerateFiles = false;
         private readonly ILogger<Odru> _logger;
         private readonly IOptions<OdruOptions> _options;
+        private readonly string? _rootUploadPath;
+        private readonly string _userName;
+        private GraphServiceClient? _gs;
+        private User? _user;
 
         public Odru(ILogger<Odru> logger, IOptions<OdruOptions> options)
         {
             this._logger = logger;
-          
+            _rootUploadPath = options.Value.RootDirectory;
             _userName = options.Value.UserName ?? "";
             this._options = options;
             _gs = new GraphServiceClient(DoAuth(options.Value));
         }
-        private async Task<int> RunThis(CancellationToken cancellationToken)
-        {
 
-     
+        public async Task PutFileAsync(IFileInfo fileInfo, string? relativePath)
+        {
+            await UploadTask(_userName, fileInfo, relativePath);
+        }
+
+        private async Task<int> RunThis(IFileInfo file, CancellationToken cancellationToken)
+        {
             // Get user reference from graph api
             _user = await GetUserAsync(_userName);
             Console.WriteLine(_user.UserPrincipalName);
             try
             {
-
                 if (_enumerateFiles)
                 {
-                    var results = await EnumerateFilesAsync(_user.Id, _uploadPath, cancellationToken);
+                    var results = await EnumerateFilesAsync(_user.Id, _rootUploadPath, cancellationToken);
                     foreach (var driveItem in results)
                     {
                         Console.WriteLine(driveItem.Name);
                     }
-
                 }
                 else
-                    if (_file != null)
-                    await UploadTask(_user.Id, _file);
+                    await UploadTask(_user.Id, file, null);
             }
             catch (Exception e)
             {
@@ -156,6 +161,7 @@ namespace ZoomFileManager.Services
             return self.Select((item, index) => (item, index));
         }
     }
+
     internal partial class Odru
     {
         private const int RecurseLevel = 1;
@@ -277,8 +283,7 @@ namespace ZoomFileManager.Services
             return collection;
         }
 
-        internal async Task<IList<DriveItem>?> GetDriveItemsFromPageAsync(IDriveItemChildrenCollectionPage? page,
-            CancellationToken cancellationToken)
+        private async Task<IList<DriveItem>?> GetDriveItemsFromPageAsync(IDriveItemChildrenCollectionPage? page, CancellationToken cancellationToken)
         {
             if (page == null)
                 return null;
@@ -322,7 +327,7 @@ namespace ZoomFileManager.Services
             return collection;
         }
 
-        internal async Task<int> UploadTask(string user, FileInfo filePath)
+        private async Task UploadTask(string user, IFileInfo filePath, string? relativePath)
         {
             if (_gs == null)
                 throw new NullReferenceException(nameof(_gs));
@@ -330,14 +335,19 @@ namespace ZoomFileManager.Services
             try
             {
                 // where you want to save the file, with name
-                string itemPath = $"/{_uploadPath}/{filePath.Name}";
+                const string itemPath =
+                    $"/{_rootUploadPath}/{(string.IsNullOrWhiteSpace(relativePath) ? null : (relativePath + '/'))}{filePath.Name}";
 
 
                 // you can use this to track exceptions, not used in this example
                 var exceptions = new List<Exception>();
 
 
-                await using var fileStream = filePath.OpenRead();
+                await using var fileStream = filePath.CreateReadStream();
+
+                // avoid dereferencing disposed var later
+                const long fileStreamLength = fileStream.Length;
+
                 var stopwatch = Stopwatch.StartNew();
                 long lastProgress = 0;
                 var uploadProps = new DriveItemUploadableProperties
@@ -357,7 +367,7 @@ namespace ZoomFileManager.Services
                     .PostAsync();
 
                 // Max slice size must be a multiple of 320 KiB
-                int maxSliceSize = 320 * 1024 * 30;
+                const int maxSliceSize = 320 * 1024 * 30;
                 var fileUploadTask =
                     new LargeFileUploadTask<DriveItem>(uploadSession, fileStream, maxSliceSize);
 
@@ -376,7 +386,7 @@ namespace ZoomFileManager.Services
                     }
 
                     Console.WriteLine(
-                        $"[{(100 * progress2 / fileStream.Length).ToString()} % - {spd} mb/sec]Uploaded {progress2.ToString()} bytes of {fileStream.Length.ToString()} bytes");
+                        $"[{(100 * progress2 / fileStreamLength).ToString()} % - {spd} mb/sec]Uploaded {progress2.ToString()} bytes of {fileStreamLength.ToString()} bytes");
                     stopwatch.Restart();
                     lastProgress = progress2;
                 });
@@ -386,7 +396,7 @@ namespace ZoomFileManager.Services
                     // Upload the file
                     var uploadResult = await fileUploadTask.UploadAsync(progress);
 
-                    Console.WriteLine(uploadResult.UploadSucceeded
+                    _logger.LogInformation(uploadResult.UploadSucceeded
                         ? $"Upload complete, item ID: {uploadResult.ItemResponse.Id}"
                         : "Upload failed");
                     Console.WriteLine($"upload of {uploadResult.ItemResponse.Name} was successful");
@@ -400,7 +410,7 @@ namespace ZoomFileManager.Services
                 }
                 catch (ServiceException ex)
                 {
-                    Console.WriteLine($"Error uploading: {ex}");
+                    _logger.LogError($"Error uploading: {ex.Message}", ex);
                     return 1;
                 }
 
@@ -420,15 +430,15 @@ namespace ZoomFileManager.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Upload failed with exception {e.Message}", e);
+                _logger.LogError($"Upload failed with exception {e.Message}", e);
                 return 1;
             }
         }
 
-        private bool CompareSha1(string uploadedHash)
+        private async Task<bool> CompareSha1(IFileInfo file, string uploadedHash)
         {
             using var sha = SHA1.Create();
-            using var fileStream = _file?.OpenRead();
+            await using var fileStream = file.CreateReadStream();
             string localHash =
                 Convert.ToBase64String(sha.ComputeHash(fileStream ?? throw new InvalidOperationException()));
             //debug
@@ -438,17 +448,14 @@ namespace ZoomFileManager.Services
             return uploadedHash.Equals(localHash);
         }
 
-        private byte[] GetFileBytes(FileSystemInfo filePath)
-        {
-            return System.IO.File.ReadAllBytes(filePath.FullName);
-        }
+        private byte[] GetFileBytes(FileSystemInfo filePath) => File.ReadAllBytes(filePath.FullName);
 
         private async Task<UploadSession> GetUploadSession(IGraphServiceClient client, string item, string user)
         {
             return await client.Users[user].Drive.Root.ItemWithPath(item).CreateUploadSession().Request().PostAsync();
         }
 
-        internal ClientCredentialProvider DoAuth(OdruOptions options)
+        private static ClientCredentialProvider DoAuth(OdruOptions options)
         {
             var confidentialClientApplication = ConfidentialClientApplicationBuilder
                 .Create(options.ClientId)
@@ -460,7 +467,4 @@ namespace ZoomFileManager.Services
             return authProvider;
         }
     }
-
 }
-
-

@@ -81,7 +81,7 @@ namespace ZoomFileManager.Services
         {
             try
             {
-                var fileInfo = _fileProvider.GetFileInfo(fileName);
+                IFileInfo? fileInfo = _fileProvider.GetFileInfo(fileName);
                 if (await IsFileLocked(fileInfo))
                     fileInfo = _fileProvider.GetFileInfo(fileName + "(copy)");
 
