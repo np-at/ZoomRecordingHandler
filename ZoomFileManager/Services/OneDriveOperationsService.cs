@@ -57,12 +57,10 @@ namespace ZoomFileManager.Services
     }
     internal partial class Odru
     {
-        internal static string _clientId;
-        internal static string _clientSecret;
-        internal static string _tenantId;
+
         internal static string _userName;
         internal static FileInfo? _file;
-        internal static GraphServiceClient _gs;
+        private static GraphServiceClient? _gs;
         internal static User _user = null!;
         internal static string? _uploadPath = "Uploads";
         internal static bool _enumerateFiles = false;
@@ -72,33 +70,15 @@ namespace ZoomFileManager.Services
         public Odru(ILogger<Odru> logger, IOptions<OdruOptions> options)
         {
             this._logger = logger;
-            _clientId = options.Value.ClientId;
-            _clientSecret = options.Value.ClientSecret;
-            _tenantId = options.Value.TenantId;
+          
             _userName = options.Value.UserName ?? "";
             this._options = options;
+            _gs = new GraphServiceClient(DoAuth(options.Value));
         }
         private static async Task<int> RunThis(CancellationToken cancellationToken)
         {
 
-            try
-            {
-
-                // initialize authentication and graph service client
-                var au = DoAuth();
-                _gs = new GraphServiceClient(au);
-            }
-            catch (MsalClientException e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex);
-                throw;
-            }
-
+     
             // Get user reference from graph api
             _user = await GetUserAsync(_userName);
             Console.WriteLine(_user.UserPrincipalName);
@@ -468,12 +448,12 @@ namespace ZoomFileManager.Services
             return await client.Users[user].Drive.Root.ItemWithPath(item).CreateUploadSession().Request().PostAsync();
         }
 
-        internal static ClientCredentialProvider DoAuth()
+        internal static ClientCredentialProvider DoAuth(OdruOptions options)
         {
             var confidentialClientApplication = ConfidentialClientApplicationBuilder
-                .Create(_clientId)
-                .WithTenantId(_tenantId)
-                .WithClientSecret(_clientSecret)
+                .Create(options.ClientId)
+                .WithTenantId(options.TenantId)
+                .WithClientSecret(options.ClientSecret)
                 .Build();
 
             var authProvider = new ClientCredentialProvider(confidentialClientApplication);
