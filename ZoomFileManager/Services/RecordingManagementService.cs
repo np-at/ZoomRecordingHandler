@@ -58,12 +58,11 @@ namespace ZoomFileManager.Services
                 requestMessage.Dispose();
             }
         }
-        protected virtual bool IsFileLocked(IFileInfo file)
+        protected async virtual Task<bool> IsFileLocked(IFileInfo file)
         {
             try
             {
-                using FileStream stream = File.Open( file.PhysicalPath,FileMode.Open, FileAccess.Read, FileShare.None);
-                stream.Close();
+                await using FileStream stream = File.Open( file.PhysicalPath,FileMode.Open, FileAccess.Read, FileShare.None);
             }
             catch (IOException)
             {
@@ -73,6 +72,7 @@ namespace ZoomFileManager.Services
                 //or does not exist (has already been processed)
                 return true;
             }
+           
 
             //file is not locked
             return false;
@@ -82,23 +82,23 @@ namespace ZoomFileManager.Services
             try
             {
                 var fileInfo = _fileProvider.GetFileInfo(fileName);
-                if (IsFileLocked(fileInfo))
+                if (await IsFileLocked(fileInfo))
                     fileInfo = _fileProvider.GetFileInfo(fileName + "(copy)");
 
                 if (fileInfo.Exists)
                 {
                     if (!force)
                     {
-                        var exception = new Exception($"File already exists at ${fileInfo.PhysicalPath} and 'force' not specified");
-                        _logger.LogError($"File already exists.  Set 'force' = true to override", exception);
-                        throw exception;
+                        _logger.LogError($"File already exists.  Set 'force' = true to override");
+                        httpRequest.Dispose();
+                        return;
                     }
                     else
                         _logger.LogInformation($"File exists at ${fileInfo.PhysicalPath}, overwriting");
                 }
                 using var client = _httpClientFactory.CreateClient();
 
-                var response = await client.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead);
+                using var response = await client.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead);
                 await using var stream = await response.Content.ReadAsStreamAsync();
 
                 await using var fs = File.Create(fileInfo.PhysicalPath);
@@ -108,12 +108,6 @@ namespace ZoomFileManager.Services
 
                 _logger.LogInformation($"File saved as [{fileInfo.PhysicalPath}]");
                 httpRequest.Dispose();
-                await stream.DisposeAsync();
-                await fs.DisposeAsync();
-                _fileProvider.Dispose();
-                response.Dispose();
-                client.Dispose();
-
             }
             catch (Exception e)
             {

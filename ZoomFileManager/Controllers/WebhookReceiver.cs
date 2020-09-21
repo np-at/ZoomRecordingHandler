@@ -37,9 +37,11 @@ namespace ZoomFileManager.Controllers
                     _ = Task.Run(async () =>
                     {
                         using var scope = serviceScopeFactory.CreateScope();
-                        var recService = scope.ServiceProvider.GetRequiredService<RecordingManagementService>();
-                        await recService.DownloadFileAsync(webhookEvent);
+                        using var recService = scope.ServiceProvider.GetRequiredService<RecordingManagementService>();
+                        await recService.DownloadFileAsync(webhookEvent).ConfigureAwait(false);
+                     
                     });
+              
                     return NoContent();
 
 
@@ -49,6 +51,7 @@ namespace ZoomFileManager.Controllers
                     _logger.LogDebug("null ref", ex);
                     return new UnprocessableEntityResult();
                 }
+              
             }
             else
             {

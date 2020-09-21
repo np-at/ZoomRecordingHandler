@@ -58,12 +58,12 @@ namespace ZoomFileManager.Services
     internal partial class Odru
     {
 
-        internal static string _userName;
-        internal static FileInfo? _file;
-        private static GraphServiceClient? _gs;
-        internal static User _user = null!;
-        internal static string? _uploadPath = "Uploads";
-        internal static bool _enumerateFiles = false;
+        internal  string _userName;
+        internal FileInfo? _file;
+        private GraphServiceClient? _gs;
+        internal User _user = null!;
+        internal string? _uploadPath = "Uploads";
+        internal bool _enumerateFiles = false;
         private readonly ILogger<Odru> _logger;
         private readonly IOptions<OdruOptions> _options;
 
@@ -75,7 +75,7 @@ namespace ZoomFileManager.Services
             this._options = options;
             _gs = new GraphServiceClient(DoAuth(options.Value));
         }
-        private static async Task<int> RunThis(CancellationToken cancellationToken)
+        private async Task<int> RunThis(CancellationToken cancellationToken)
         {
 
      
@@ -160,7 +160,7 @@ namespace ZoomFileManager.Services
     {
         private const int RecurseLevel = 1;
 
-        internal static async Task<User> GetUserAsync(string userName)
+        internal async Task<User> GetUserAsync(string userName)
         {
             var userList = new List<User>();
 
@@ -199,7 +199,7 @@ namespace ZoomFileManager.Services
             }
         }
 
-        internal static async Task<List<DriveItem>> EnumerateFilesAsync(string user, string? rootDir,
+        internal async Task<List<DriveItem>> EnumerateFilesAsync(string user, string? rootDir,
             CancellationToken cancellationToken)
         {
             if (user == null) throw new ArgumentNullException(nameof(user));
@@ -277,7 +277,7 @@ namespace ZoomFileManager.Services
             return collection;
         }
 
-        internal static async Task<IList<DriveItem>?> GetDriveItemsFromPageAsync(IDriveItemChildrenCollectionPage? page,
+        internal async Task<IList<DriveItem>?> GetDriveItemsFromPageAsync(IDriveItemChildrenCollectionPage? page,
             CancellationToken cancellationToken)
         {
             if (page == null)
@@ -304,7 +304,7 @@ namespace ZoomFileManager.Services
             return collection;
         }
 
-        internal static async Task<IList<DriveItem>?> GetDriveItemChildrenAsync(DriveItem driveItem,
+        internal async Task<IList<DriveItem>?> GetDriveItemChildrenAsync(DriveItem driveItem,
             CancellationToken cancellationToken)
         {
             var collection = new List<DriveItem>();
@@ -322,7 +322,7 @@ namespace ZoomFileManager.Services
             return collection;
         }
 
-        internal static async Task<int> UploadTask(string user, FileInfo filePath)
+        internal async Task<int> UploadTask(string user, FileInfo filePath)
         {
             if (_gs == null)
                 throw new NullReferenceException(nameof(_gs));
@@ -425,7 +425,7 @@ namespace ZoomFileManager.Services
             }
         }
 
-        private static bool CompareSha1(string uploadedHash)
+        private bool CompareSha1(string uploadedHash)
         {
             using var sha = SHA1.Create();
             using var fileStream = _file?.OpenRead();
@@ -438,17 +438,17 @@ namespace ZoomFileManager.Services
             return uploadedHash.Equals(localHash);
         }
 
-        private static byte[] GetFileBytes(FileSystemInfo filePath)
+        private byte[] GetFileBytes(FileSystemInfo filePath)
         {
             return System.IO.File.ReadAllBytes(filePath.FullName);
         }
 
-        private static async Task<UploadSession> GetUploadSession(IGraphServiceClient client, string item, string user)
+        private async Task<UploadSession> GetUploadSession(IGraphServiceClient client, string item, string user)
         {
             return await client.Users[user].Drive.Root.ItemWithPath(item).CreateUploadSession().Request().PostAsync();
         }
 
-        internal static ClientCredentialProvider DoAuth(OdruOptions options)
+        internal ClientCredentialProvider DoAuth(OdruOptions options)
         {
             var confidentialClientApplication = ConfidentialClientApplicationBuilder
                 .Create(options.ClientId)
