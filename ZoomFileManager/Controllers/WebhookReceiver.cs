@@ -1,6 +1,9 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using System;
+using System.Linq;
 using System.Threading.Tasks;
 using ZoomFileManager.Models;
 using ZoomFileManager.Services;
@@ -8,29 +11,39 @@ using ZoomFileManager.Services;
 namespace ZoomFileManager.Controllers
 {
     [ApiController]
-    [Route("zc")]
+    [Route("api/zc")]
     
     public class WebhookReceiver : ControllerBase
     {
         private readonly ILogger<WebhookReceiver> _logger;
         private readonly RecordingManagementService _recordingManagementService;
-        private readonly string _authorizationKey;
+        private readonly IOptions<WebhookRecieverOptions> _options;
 
-        public WebhookReceiver(ILogger<WebhookReceiver> logger, RecordingManagementService recordingManagementService)
+        public WebhookReceiver(ILogger<WebhookReceiver> logger, RecordingManagementService recordingManagementService, IOptions<WebhookRecieverOptions> options)
         {
             this._logger = logger;
             this._recordingManagementService = recordingManagementService;
-            this._authorizationKey = "poop";
+            this._options = options;
         }
 
         [HttpPost]
         public async Task<IActionResult> ReceiveNotification(ZoomWebhookEvent webhookEvent, [FromHeader(Name = "Authorization" )] string? authKey)
         {
             _logger.LogDebug("Received Webhook", HttpContext.Request);
-            if (authKey?.Equals(_authorizationKey) ?? false)
+            if (_options?.Value?.AllowedTokens?.Contains(authKey)?? false)
             {
-                await _recordingManagementService.DownloadFileAsync(webhookEvent).ConfigureAwait(false);
-                return NoContent();
+                try
+                {
+                    await _recordingManagementService.DownloadFileAsync(webhookEvent).ConfigureAwait(false);
+                    return NoContent();
+
+
+                }
+                catch (NullReferenceException ex)
+                {
+                    _logger.LogDebug("null ref", ex);
+                    return new UnprocessableEntityResult();
+                }
             }
             else
             {
@@ -40,5 +53,9 @@ namespace ZoomFileManager.Controllers
 
 
         }
+    }
+    public class WebhookRecieverOptions
+    {
+        public string[] AllowedTokens { get; set; } = Array.Empty<string>();
     }
 }
