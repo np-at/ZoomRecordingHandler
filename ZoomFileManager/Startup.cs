@@ -42,11 +42,14 @@ namespace ZoomFileManager
             .AddScheme<TokenAuthenticationOptions, TokenAuthenticationHandler>(SchemesNamesConst.TokenAuthenticationDefaultScheme, o => { });
             services.AddScoped<OneDriveOperationsService>();
             services.AddScoped<RecordingManagementService>();
+            services.AddScoped<Odru>();
             services.Configure((Action<WebhookRecieverOptions>)(o =>
             {
                 o.AllowedTokens =  Configuration.GetSection("AppConfig").GetSection("allowedTokens").Get<string[]>();;
 
             }));
+ 
+            services.Configure<OdruOptions>(x => Configuration.GetSection("AppConfig").Bind("OdruOptions", x));
             services.AddControllers();
         }
 
