@@ -23,8 +23,10 @@ namespace ZoomFileManager.Services
             _httpClientFactory = httpClientFactory;
             _fileProvider = fileProvider;
         }
-        internal (HttpRequestMessage requestMessage, string name)[] GenerateZoomApiRequestsFromWebhook(ZoomWebhookEvent webhookEvent, Func<RecordingFile, string> nameTransformationFunc)
+        internal IEnumerable<(HttpRequestMessage requestMessage, string name)> GenerateZoomApiRequestsFromWebhook(ZoomWebhookEvent webhookEvent, Func<RecordingFile, string> nameTransformationFunc)
         {
+            if ((webhookEvent?.Payload?.Object?.RecordingFiles ?? null) == null)
+                throw new NullReferenceException();
             var requests = new List<(HttpRequestMessage requestMessage, string name)>();
             foreach (var item in webhookEvent.Payload.Object.RecordingFiles)
             {
@@ -36,7 +38,7 @@ namespace ZoomFileManager.Services
             return requests.ToArray();
 
         }
-        private string ExampleNameTransformtionFunc(RecordingFile recordingFile)
+        private string ExampleNameTransformationFunc(RecordingFile recordingFile)
         {
             var sb = new StringBuilder();
             sb.Append(recordingFile.Id);
@@ -45,7 +47,7 @@ namespace ZoomFileManager.Services
         }
         internal async Task DownloadFileAsync(ZoomWebhookEvent webhookEvent)
         {
-            var requests = GenerateZoomApiRequestsFromWebhook(webhookEvent, ExampleNameTransformtionFunc);
+            var requests = GenerateZoomApiRequestsFromWebhook(webhookEvent, ExampleNameTransformationFunc);
             foreach (var (requestMessage, name) in requests)
             {
                 await DownloadFileAsync(httpRequest: requestMessage, fileName: name);
