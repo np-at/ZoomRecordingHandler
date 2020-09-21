@@ -1,19 +1,11 @@
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using ZoomFileManager.Services;
-using System.Net;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using ZoomFileManager.Controllers;
 using System;
 
@@ -40,9 +32,9 @@ namespace ZoomFileManager
                 o.DefaultScheme = SchemesNamesConst.TokenAuthenticationDefaultScheme;
             })
             .AddScheme<TokenAuthenticationOptions, TokenAuthenticationHandler>(SchemesNamesConst.TokenAuthenticationDefaultScheme, o => { });
-            services.AddScoped<OneDriveOperationsService>();
-            services.AddScoped<RecordingManagementService>();
-            services.AddScoped<Odru>();
+            services.AddTransient<OneDriveOperationsService>();
+            services.AddTransient<RecordingManagementService>();
+            services.AddTransient<Odru>();
             services.Configure((Action<WebhookRecieverOptions>)(o =>
             {
                 o.AllowedTokens =  Configuration.GetSection("AppConfig").GetSection("allowedTokens").Get<string[]>();;

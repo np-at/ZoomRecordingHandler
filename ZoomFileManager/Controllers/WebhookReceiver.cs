@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
@@ -12,29 +13,33 @@ namespace ZoomFileManager.Controllers
 {
     [ApiController]
     [Route("api/zc")]
-    
+
     public class WebhookReceiver : ControllerBase
     {
         private readonly ILogger<WebhookReceiver> _logger;
-        private readonly RecordingManagementService _recordingManagementService;
         private readonly IOptions<WebhookRecieverOptions> _options;
 
-        public WebhookReceiver(ILogger<WebhookReceiver> logger, RecordingManagementService recordingManagementService, IOptions<WebhookRecieverOptions> options)
+        public WebhookReceiver(ILogger<WebhookReceiver> logger, IOptions<WebhookRecieverOptions> options)
         {
             this._logger = logger;
-            this._recordingManagementService = recordingManagementService;
             this._options = options;
         }
 
         [HttpPost]
-        public async Task<IActionResult> ReceiveNotification(ZoomWebhookEvent webhookEvent, [FromHeader(Name = "Authorization" )] string? authKey)
+        public IActionResult ReceiveNotification([FromBody] ZoomWebhookEvent webhookEvent, [FromServices] IServiceScopeFactory
+                                    serviceScopeFactory, [FromHeader(Name = "Authorization")] string? authKey)
         {
-            _logger.LogDebug("Received Webhook", HttpContext.Request);
-            if (_options?.Value?.AllowedTokens?.Contains(authKey)?? false)
+            _logger.LogDebug("Received Webhook");
+            if (_options?.Value?.AllowedTokens?.Contains(authKey) ?? false)
             {
                 try
                 {
-                    await _recordingManagementService.DownloadFileAsync(webhookEvent).ConfigureAwait(false);
+                    _ = Task.Run(async () =>
+                    {
+                        using var scope = serviceScopeFactory.CreateScope();
+                        var recService = scope.ServiceProvider.GetRequiredService<RecordingManagementService>();
+                        await recService.DownloadFileAsync(webhookEvent);
+                    });
                     return NoContent();
 
 
@@ -47,7 +52,7 @@ namespace ZoomFileManager.Controllers
             }
             else
             {
-                _logger.LogWarning($"invalid auth token received", HttpContext);
+                _logger.LogWarning($"invalid auth token received");
                 return new ForbidResult();
             }
 

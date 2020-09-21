@@ -10,10 +10,8 @@ namespace ZoomFileManager.Models
 {
     using System;
     using System.Collections.Generic;
+    using System.Text.Json.Serialization;
 
-    using System.Globalization;
-    using Newtonsoft.Json;
-    using Newtonsoft.Json.Converters;
 
     public partial class ZoomWebhookEvent
     {
@@ -41,16 +39,16 @@ namespace ZoomFileManager.Models
         ///
         /// Example: `https://zoom.us/recording/download/bdfdgdg?access_token=abvdoerbfg`
         /// </summary>
-        [JsonProperty("download_token", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonPropertyName("download_token")]
         public string DownloadToken { get; set; }
 
         /// <summary>
         /// Name of the event.
         /// </summary>
-        [JsonProperty("event", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonPropertyName("event")]
         public string Event { get; set; }
 
-        [JsonProperty("payload", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonPropertyName("payload")]
         public Payload Payload { get; set; }
     }
 
@@ -60,10 +58,10 @@ namespace ZoomFileManager.Models
         /// Account Id of the user (host / co-host) who ended the meeting and also completed the
         /// recording.
         /// </summary>
-        [JsonProperty("account_id", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonPropertyName("account_id")]
         public string AccountId { get; set; }
 
-        [JsonProperty("object", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonPropertyName("object")]
         public Object Object { get; set; }
     }
 
@@ -72,68 +70,68 @@ namespace ZoomFileManager.Models
         /// <summary>
         /// Duration of the recording.
         /// </summary>
-        [JsonProperty("duration", NullValueHandling = NullValueHandling.Ignore)]
-        public long? Duration { get; set; }
+        [JsonPropertyName("duration")]
+        public int? Duration { get; set; }
 
         /// <summary>
         /// Email address of the host.
         /// </summary>
-        [JsonProperty("host_email", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonPropertyName("host_email")]
         public string HostEmail { get; set; }
 
         /// <summary>
         /// ID of the user who is set as the host of the meeting.
         /// </summary>
-        [JsonProperty("host_id", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonPropertyName("host_id")]
         public string HostId { get; set; }
 
         /// <summary>
         /// Unique Identifier of the Meeting/ Webinar that was being recorded.
         /// </summary>
-        [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
-        public long? Id { get; set; }
+        [JsonPropertyName("id")]
+        public int? Id { get; set; }
 
         /// <summary>
         /// The number of recording files recovered.
         /// </summary>
-        [JsonProperty("recording_count", NullValueHandling = NullValueHandling.Ignore)]
-        public long? RecordingCount { get; set; }
+        [JsonPropertyName("recording_count")]
+        public int? RecordingCount { get; set; }
 
         /// <summary>
         /// Array of recording file objects recovered.
         /// </summary>
-        [JsonProperty("recording_files", NullValueHandling = NullValueHandling.Ignore)]
-        public RecordingFile[] RecordingFiles { get; set; }
+        [JsonPropertyName("recording_files")]
+        public IEnumerable<RecordingFile> RecordingFiles { get; set; }
 
         /// <summary>
         /// The URL of the recording using which approved users can view the recording.
         /// </summary>
-        [JsonProperty("share_url", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonPropertyName("share_url")]
         public string ShareUrl { get; set; }
 
         /// <summary>
         /// Meeting start time.
         /// </summary>
-        [JsonProperty("start_time", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonPropertyName("start_time")]
         public DateTimeOffset? StartTime { get; set; }
 
         /// <summary>
         /// Timezone to format the meeting start time.
         /// </summary>
-        [JsonProperty("timezone", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonPropertyName("timezone")]
         public string Timezone { get; set; }
 
         /// <summary>
         /// Meeting topic.
         /// </summary>
-        [JsonProperty("topic", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonPropertyName("topic")]
         public string Topic { get; set; }
 
         /// <summary>
         /// The total size of the recording in bytes.
         /// </summary>
-        [JsonProperty("total_size", NullValueHandling = NullValueHandling.Ignore)]
-        public long? TotalSize { get; set; }
+        [JsonPropertyName("total_size")]
+        public int? TotalSize { get; set; }
 
         /// <summary>
         /// Meeting or Webinar Types.
@@ -150,13 +148,13 @@ namespace ZoomFileManager.Models
         /// `5` - Webinar<br> `6` - Recurring Webinar without a fixed time<br> `9` - Recurring
         /// Webinar with a fixed time.
         /// </summary>
-        [JsonProperty("type", NullValueHandling = NullValueHandling.Ignore)]
-        public long? Type { get; set; }
+        [JsonPropertyName("type")]
+        public int? Type { get; set; }
 
         /// <summary>
         /// Universally unique identifier of the Meeting/Webinar instance that was recorded.
         /// </summary>
-        [JsonProperty("uuid", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonPropertyName("uuid")]
         public string Uuid { get; set; }
     }
 
@@ -165,84 +163,63 @@ namespace ZoomFileManager.Models
         /// <summary>
         /// The URL using which the file can be downloaded.
         /// </summary>
-        [JsonProperty("download_url", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonPropertyName("download_url")]
         public string DownloadUrl { get; set; }
 
         /// <summary>
         /// The size of the recording file in bytes.
         /// </summary>
-        [JsonProperty("file_size", NullValueHandling = NullValueHandling.Ignore)]
-        public long? FileSize { get; set; }
+        [JsonPropertyName("file_size")]
+        public int? FileSize { get; set; }
 
         /// <summary>
         /// The type of file.
         /// </summary>
-        [JsonProperty("file_type", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonPropertyName("file_type")]
         public string FileType { get; set; }
 
         /// <summary>
         /// Unique Identifier for Recording File. Recording File ID.
         /// </summary>
-        [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonPropertyName("id")]
         public string Id { get; set; }
 
         /// <summary>
         /// Unique Identifier of the meeting.
         /// </summary>
-        [JsonProperty("meeting_id", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonPropertyName("meeting_id")]
         public string MeetingId { get; set; }
 
         /// <summary>
         /// The URL of the file using which it can be opened and played.
         /// </summary>
-        [JsonProperty("play_url", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonPropertyName("play_url")]
         public string PlayUrl { get; set; }
 
         /// <summary>
         /// The date and time at which recording ended.
         /// </summary>
-        [JsonProperty("recording_end", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonPropertyName("recording_end")]
         public string RecordingEnd { get; set; }
 
         /// <summary>
         /// The date and time at which recording started.
         /// </summary>
-        [JsonProperty("recording_start", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonPropertyName("recording_start")]
         public DateTimeOffset? RecordingStart { get; set; }
 
         /// <summary>
         /// The type of the recording.
         /// </summary>
-        [JsonProperty("recording_type", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonPropertyName("recording_type")]
         public string RecordingType { get; set; }
 
         /// <summary>
         /// Status of the recording. <br>`completed`: Recording has been completed.
         /// </summary>
-        [JsonProperty("status", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonPropertyName("status")]
         public string Status { get; set; }
     }
 
-    public partial class ZoomWebhookEvent
-    {
-        public static ZoomWebhookEvent FromJson(string json) => JsonConvert.DeserializeObject<ZoomWebhookEvent>(json, ZoomFileManager.Models.Converter.Settings);
-    }
-
-    public static class Serialize
-    {
-        public static string ToJson(this ZoomWebhookEvent self) => JsonConvert.SerializeObject(self, ZoomFileManager.Models.Converter.Settings);
-    }
-
-    internal static class Converter
-    {
-        public static readonly JsonSerializerSettings Settings = new JsonSerializerSettings
-        {
-            MetadataPropertyHandling = MetadataPropertyHandling.Ignore,
-            DateParseHandling = DateParseHandling.None,
-            Converters =
-            {
-                new IsoDateTimeConverter { DateTimeStyles = DateTimeStyles.AssumeUniversal }
-            },
-        };
-    }
+   
 }
