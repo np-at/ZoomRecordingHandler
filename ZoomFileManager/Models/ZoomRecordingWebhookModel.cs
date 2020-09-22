@@ -13,7 +13,7 @@ namespace ZoomFileManager.Models
     using System.Text.Json.Serialization;
 
 
-    public partial class ZoomWebhookEvent
+    public class ZoomWebhookEvent
     {
         /// <summary>
         /// Use this token along with the `download_url` to download the  Cloud Recording via an
@@ -35,9 +35,9 @@ namespace ZoomFileManager.Models
         ///
         /// #### Using Query Parameter
         /// The URL to download this type of recording will follow this structure:
-        /// `{download_url}/?access_token={download_token}`
+        /// `{download_url}/access_token={download_token}`
         ///
-        /// Example: `https://zoom.us/recording/download/bdfdgdg?access_token=abvdoerbfg`
+        /// Example: `https://zoom.us/recording/download/bdfdgdgaccess_token=abvdoerbfg`
         /// </summary>
         [JsonPropertyName("download_token")]
         public string DownloadToken { get; set; }
@@ -63,6 +63,12 @@ namespace ZoomFileManager.Models
 
         [JsonPropertyName("object")]
         public Object Object { get; set; }
+        
+        [JsonPropertyName("event")]
+        public string Event { get; set; }
+        
+        [JsonPropertyName("download_token")]
+        public string DownloadToken { get; set; }
     }
 
     public partial class Object
@@ -71,7 +77,7 @@ namespace ZoomFileManager.Models
         /// Duration of the recording.
         /// </summary>
         [JsonPropertyName("duration")]
-        public int? Duration { get; set; }
+        public int Duration { get; set; }
 
         /// <summary>
         /// Email address of the host.
@@ -89,13 +95,13 @@ namespace ZoomFileManager.Models
         /// Unique Identifier of the Meeting/ Webinar that was being recorded.
         /// </summary>
         [JsonPropertyName("id")]
-        public int? Id { get; set; }
+        public int Id { get; set; }
 
         /// <summary>
         /// The number of recording files recovered.
         /// </summary>
         [JsonPropertyName("recording_count")]
-        public int? RecordingCount { get; set; }
+        public int RecordingCount { get; set; }
 
         /// <summary>
         /// Array of recording file objects recovered.
@@ -113,7 +119,7 @@ namespace ZoomFileManager.Models
         /// Meeting start time.
         /// </summary>
         [JsonPropertyName("start_time")]
-        public DateTimeOffset? StartTime { get; set; }
+        public DateTimeOffset StartTime { get; set; }
 
         /// <summary>
         /// Timezone to format the meeting start time.
@@ -131,7 +137,7 @@ namespace ZoomFileManager.Models
         /// The total size of the recording in bytes.
         /// </summary>
         [JsonPropertyName("total_size")]
-        public int? TotalSize { get; set; }
+        public int TotalSize { get; set; }
 
         /// <summary>
         /// Meeting or Webinar Types.
@@ -149,7 +155,7 @@ namespace ZoomFileManager.Models
         /// Webinar with a fixed time.
         /// </summary>
         [JsonPropertyName("type")]
-        public int? Type { get; set; }
+        public int Type { get; set; }
 
         /// <summary>
         /// Universally unique identifier of the Meeting/Webinar instance that was recorded.
@@ -170,7 +176,7 @@ namespace ZoomFileManager.Models
         /// The size of the recording file in bytes.
         /// </summary>
         [JsonPropertyName("file_size")]
-        public int? FileSize { get; set; }
+        public int FileSize { get; set; }
 
         /// <summary>
         /// The type of file.
@@ -206,7 +212,7 @@ namespace ZoomFileManager.Models
         /// The date and time at which recording started.
         /// </summary>
         [JsonPropertyName("recording_start")]
-        public DateTimeOffset? RecordingStart { get; set; }
+        public DateTimeOffset RecordingStart { get; set; }
 
         /// <summary>
         /// The type of the recording.
@@ -215,7 +221,7 @@ namespace ZoomFileManager.Models
         public string RecordingType { get; set; }
 
         /// <summary>
-        /// Status of the recording. <br>`completed`: Recording has been completed.
+        /// Status of the recording. <br />`completed`: Recording has been completed.
         /// </summary>
         [JsonPropertyName("status")]
         public string Status { get; set; }
