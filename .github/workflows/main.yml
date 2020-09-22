@@ -53,9 +53,9 @@ jobs:
           # Automatically tags the built image with the git short SHA as per the readme
           # tag_with_sha: # optional
           # Path to the build context
-          path: .
+          context: .
           # Path to the Dockerfile (Default is '{path}/Dockerfile')
-          dockerfile: '${{ github.workspace }}/ZoomRecordingHandler/DockerfileSelfContained'
+          dockerfile: './ZoomRecordingHandler/DockerfileSelfContained'
           # Sets the target stage to build
           # target: # optional
           # Always attempt to pull a newer version of the image
