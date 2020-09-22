@@ -55,7 +55,7 @@ jobs:
           # Path to the build context
           context: .
           # Path to the Dockerfile (Default is '{path}/Dockerfile')
-          dockerfile: './ZoomRecordingHandler/DockerfileSelfContained'
+          file: './ZoomRecordingHandler/DockerfileSelfContained'
           # Sets the target stage to build
           # target: # optional
           # Always attempt to pull a newer version of the image
@@ -70,4 +70,5 @@ jobs:
           # add_git_labels: # optional
           # Whether to push the image
           push: true # optional, default is true
+          platforms: linux/amd64
       
