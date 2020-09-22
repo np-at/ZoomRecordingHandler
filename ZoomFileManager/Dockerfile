@@ -3,7 +3,6 @@
 FROM mcr.microsoft.com/dotnet/core/aspnet:3.1-alpine AS base
 WORKDIR /app
 EXPOSE 80
-RUN ln -f -s /run/secrets/zoomFileManager_settings ./appsettings.json
 FROM mcr.microsoft.com/dotnet/core/sdk:3.1-buster AS build
 WORKDIR /src
 COPY ["ZoomFileManager/ZoomFileManager.csproj", "ZoomFileManager/"]
@@ -18,4 +17,5 @@ RUN dotnet publish "ZoomFileManager.csproj" -c Release -r "linux-musl-x64" -o /a
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+RUN ln -f -s /run/secrets/zoomFileManager_settings appsettings.json
 ENTRYPOINT ["dotnet", "ZoomFileManager.dll"]
