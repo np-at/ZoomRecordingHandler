@@ -48,13 +48,13 @@ jobs:
           # Comma-delimited list of tags. These will be added to the registry/repository to form the image's tags
           tags: latest # optional
           # Automatically tags the built image with the git reference as per the readme
-          tag_with_ref: # optional
+          # tag_with_ref: # optional
           # Automatically tags the built image with the git short SHA as per the readme
           # tag_with_sha: # optional
           # Path to the build context
           path: .
           # Path to the Dockerfile (Default is '{path}/Dockerfile')
-          dockerfile: '{path}/ZoomRecordingHandler/Dockerfile'
+          dockerfile: 'ZoomRecordingHandler/DockerfileSelfContained'
           # Sets the target stage to build
           # target: # optional
           # Always attempt to pull a newer version of the image
