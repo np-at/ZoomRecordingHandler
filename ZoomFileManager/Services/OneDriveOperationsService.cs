@@ -61,21 +61,21 @@ namespace ZoomFileManager.Services
         public string? RootDirectory { get; set; }
     }
 
-    internal partial class Odru
+    public partial class Odru
     {
         private readonly bool _enumerateFiles = false;
         private readonly ILogger<Odru> _logger;
         private readonly IOptions<OdruOptions> _options;
         private readonly string? _rootUploadPath;
         private readonly string _userName;
-        private GraphServiceClient? _gs;
+        private static GraphServiceClient? _gs;
         private User? _user;
 
         public Odru(ILogger<Odru> logger, IOptions<OdruOptions> options)
         {
             this._logger = logger;
             _rootUploadPath = options.Value.RootDirectory;
-            _userName = options.Value.UserName ?? "";
+            _userName = options.Value.UserName ?? throw new Exception();
             this._options = options;
             _gs = new GraphServiceClient(DoAuth(options.Value));
         }
@@ -162,7 +162,7 @@ namespace ZoomFileManager.Services
         }
     }
 
-    internal partial class Odru
+    public partial class Odru
     {
         private const int RecurseLevel = 1;
 
@@ -335,8 +335,8 @@ namespace ZoomFileManager.Services
             try
             {
                 // where you want to save the file, with name
-                const string itemPath =
-                    $"/{_rootUploadPath}/{(string.IsNullOrWhiteSpace(relativePath) ? null : (relativePath + '/'))}{filePath.Name}";
+                string itemPath =
+                    $"/{_rootUploadPath}/{(string.IsNullOrWhiteSpace(relativePath) ? null : (relativePath.Trim('/') + '/'))}{filePath.Name}";
 
 
                 // you can use this to track exceptions, not used in this example
@@ -346,7 +346,7 @@ namespace ZoomFileManager.Services
                 await using var fileStream = filePath.CreateReadStream();
 
                 // avoid dereferencing disposed var later
-                const long fileStreamLength = fileStream.Length;
+                long fileStreamLength = fileStream.Length;
 
                 var stopwatch = Stopwatch.StartNew();
                 long lastProgress = 0;
@@ -406,12 +406,12 @@ namespace ZoomFileManager.Services
                     //     return 0;
                     // else
                     //     throw new CryptographicException("Hashes do not match");
-                    return 0;
+                    return;
                 }
                 catch (ServiceException ex)
                 {
                     _logger.LogError($"Error uploading: {ex.Message}", ex);
-                    return 1;
+                    throw;
                 }
 
 
@@ -431,7 +431,7 @@ namespace ZoomFileManager.Services
             catch (Exception e)
             {
                 _logger.LogError($"Upload failed with exception {e.Message}", e);
-                return 1;
+                throw;
             }
         }
 

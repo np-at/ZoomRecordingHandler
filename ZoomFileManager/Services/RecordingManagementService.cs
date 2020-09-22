@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.FileProviders;
-using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -8,61 +6,118 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Logging;
 using ZoomFileManager.Models;
 
 namespace ZoomFileManager.Services
 {
     public class RecordingManagementService : IDisposable
     {
-        private readonly ILogger<RecordingManagementService> _logger;
-        private readonly IHttpClientFactory _httpClientFactory;
         private readonly PhysicalFileProvider _fileProvider;
-        public RecordingManagementService(ILogger<RecordingManagementService> logger, IHttpClientFactory httpClientFactory, PhysicalFileProvider fileProvider)
+        private readonly Odru _odru;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly Regex _invalidFileNameChars = new Regex("[\\\\/:\"*?<>|]+");
+        private readonly Regex _extensionRegex =  new Regex("\\.[^.]+$");
+        private readonly ILogger<RecordingManagementService> _logger;
+
+        public RecordingManagementService(ILogger<RecordingManagementService> logger,
+            IHttpClientFactory httpClientFactory, PhysicalFileProvider fileProvider, Odru odru)
         {
-            this._logger = logger;
+            _logger = logger;
             _httpClientFactory = httpClientFactory;
             _fileProvider = fileProvider;
+            _odru = odru;
         }
-        internal IEnumerable<(HttpRequestMessage requestMessage, string name)> GenerateZoomApiRequestsFromWebhook(ZoomWebhookEvent webhookEvent, Func<RecordingFile, string> nameTransformationFunc)
+
+
+        public void Dispose()
         {
-            if ((webhookEvent?.Payload?.Object?.RecordingFiles ?? null) == null)
+            _fileProvider.Dispose();
+        }
+
+        private IEnumerable<(HttpRequestMessage requestMessage, string fileName, string? folderName)>
+            GenerateZoomApiRequestsFromWebhook(ZoomWebhookEvent webhookEvent,
+                Func<RecordingFile, string> fileNameTransformationFunc,
+                Func<ZoomWebhookEvent, string> folderNameTransformationFunc)
+        {
+            if (webhookEvent.Payload?.Object?.RecordingFiles == null)
                 throw new NullReferenceException();
-            var requests = new List<(HttpRequestMessage requestMessage, string name)>();
+
+            var requests = new List<(HttpRequestMessage requestMessage, string name, string? folderName)>();
             foreach (var item in webhookEvent.Payload.Object.RecordingFiles)
             {
                 var req = new HttpRequestMessage(HttpMethod.Get, item.DownloadUrl);
-                if (!String.IsNullOrWhiteSpace(webhookEvent?.DownloadToken))
-                    req.Headers.Authorization = AuthenticationHeaderValue.Parse($"Bearer ${webhookEvent.DownloadToken}");
+                if (!string.IsNullOrWhiteSpace(webhookEvent.DownloadToken))
+                    req.Headers.Authorization =
+                        AuthenticationHeaderValue.Parse($"Bearer ${webhookEvent.DownloadToken}");
                 req.Headers.Add("Accept", "application/json");
-                requests.Add((req, nameTransformationFunc(item)));
+                requests.Add((req, fileNameTransformationFunc(item), folderNameTransformationFunc(webhookEvent)));
                 req.Dispose();
             }
-            return requests.ToArray();
 
+            return requests.ToArray();
         }
+
+        private string ExampleFolderNameTransformationFunc(ZoomWebhookEvent webhookEvent)
+        {
+            string st =
+                $"{webhookEvent.Payload.Object.StartTime?.ToLocalTime().ToString("yy_MM_dd-hhmm-", CultureInfo.InvariantCulture)}{webhookEvent.Payload.Object.Topic}-{webhookEvent.Payload.Object.HostEmail}";
+            return _invalidFileNameChars.Replace(st, string.Empty);
+        }
+
         private string ExampleNameTransformationFunc(RecordingFile recordingFile)
         {
             var sb = new StringBuilder();
             sb.Append(recordingFile.Id);
-            sb.Append(recordingFile.RecordingStart?.ToLocalTime().ToString("MM_dd_yy__ss", CultureInfo.InvariantCulture));
-            sb.Append("." + recordingFile.FileType.ToString());
-            return sb.ToString();
+            sb.Append(
+                recordingFile.RecordingStart?.ToLocalTime().ToString("T", CultureInfo.InvariantCulture));
+            sb.Append("." + recordingFile.FileType);
+            
+            return _invalidFileNameChars.Replace(sb.ToString(), string.Empty);
         }
-        internal async Task DownloadFileAsync(ZoomWebhookEvent webhookEvent)
+
+        internal async Task DownloadFilesFromWebookAsync(ZoomWebhookEvent webhookEvent)
         {
-            var requests = GenerateZoomApiRequestsFromWebhook(webhookEvent, ExampleNameTransformationFunc);
-            foreach (var (requestMessage, name) in requests)
+            var requests = GenerateZoomApiRequestsFromWebhook(webhookEvent, ExampleNameTransformationFunc,
+                ExampleFolderNameTransformationFunc);
+            List<Task<IFileInfo>> tasks = new List<Task<IFileInfo>>();
+            
+            foreach ((var requestMessage, var fileName, string? folderName) in requests)
             {
-                await DownloadFileAsync(httpRequest: requestMessage, fileName: name);
+                tasks.Add(DownloadFileAsync(requestMessage, fileName, folderName));
                 requestMessage.Dispose();
             }
+
+            var t = Task.WhenAll(tasks);
+            IFileInfo[] processedFiles;
+            try
+            {
+                processedFiles = await t;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+
+            foreach (var file in processedFiles)
+            {
+                await _odru.PutFileAsync(file, Path.GetRelativePath(_fileProvider.Root, file.PhysicalPath));
+            }
+            
+            
         }
-        protected async virtual Task<bool> IsFileLocked(IFileInfo file)
+
+        private async Task<bool> IsFileLocked(string filePath)
         {
             try
             {
-                await using FileStream stream = File.Open( file.PhysicalPath,FileMode.Open, FileAccess.Read, FileShare.None);
+                var file = _fileProvider.GetFileInfo(filePath);
+                await using FileStream stream = File.Open(file.PhysicalPath, FileMode.Open, FileAccess.Read,
+                    FileShare.None);
             }
             catch (IOException)
             {
@@ -72,30 +127,122 @@ namespace ZoomFileManager.Services
                 //or does not exist (has already been processed)
                 return true;
             }
-           
+            catch (Exception ex)
+            {
+                _logger.LogError("failure", ex);
+                throw;
+            }
+
 
             //file is not locked
             return false;
         }
-        private async Task DownloadFileAsync(HttpRequestMessage httpRequest, string fileName, bool force = true)
+        private async Task<bool> IsFileLocked(IFileInfo file)
         {
             try
             {
-                IFileInfo? fileInfo = _fileProvider.GetFileInfo(fileName);
-                if (await IsFileLocked(fileInfo))
-                    fileInfo = _fileProvider.GetFileInfo(fileName + "(copy)");
+                await using FileStream stream = File.Open(file.PhysicalPath, FileMode.Open, FileAccess.Read,
+                    FileShare.None);
+            }
+            catch (IOException)
+            {
+                //the file is unavailable because it is:
+                //still being written to
+                //or being processed by another thread
+                //or does not exist (has already been processed)
+                return true;
+            }
+
+
+            //file is not locked
+            return false;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="httpRequest"></param>
+        /// <param name="fileName"></param>
+        /// <param name="relativePath"></param>
+        /// <param name="force"></param>
+        /// <param name="failOnExists"></param>
+        /// <returns></returns>
+        private async Task<IFileInfo> DownloadFileAsync(HttpRequestMessage httpRequest, string fileName, string? relativePath,
+            bool force = false, bool failOnExists = false)
+        {
+            try
+            {
+                string? fullPath = Path.Join(relativePath, fileName);
+                IFileInfo fileInfo;
+                try
+                {
+                    fileInfo = _fileProvider.GetFileInfo(fullPath);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    throw;
+                }
+                try
+                {
+                    Directory.CreateDirectory(Path.Join(_fileProvider.Root, relativePath));
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError("Error creating directory", e);
+                    throw;
+                }
 
                 if (fileInfo.Exists)
                 {
-                    if (!force)
+                    if (failOnExists)
                     {
-                        _logger.LogError($"File already exists.  Set 'force' = true to override");
+                        _logger.LogError("File already exists.  Set 'failOnExists' = false to avoid this behavior");
                         httpRequest.Dispose();
-                        return;
+                        throw new IOException();
                     }
-                    else
-                        _logger.LogInformation($"File exists at ${fileInfo.PhysicalPath}, overwriting");
+
+                    int iterations = 0;
+                    var fileLocked = !force || await IsFileLocked(fullPath);
+                    while (fileLocked && iterations < 100)
+                    {
+                        
+                        iterations++;
+                        
+                        var testPath = _extensionRegex.Replace(fullPath, match => ($"({iterations.ToString()})" + match.Value));
+                        try
+                        {
+                            if (!_fileProvider.GetFileInfo(testPath).Exists)
+                            {
+                                fullPath = testPath;
+                                break;
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e);
+                            throw;
+                        }
+
+                        if (!force) continue;
+                        fileLocked = await IsFileLocked(testPath);
+                        if (fileLocked) continue;
+                        fullPath = testPath;
+                        break;
+
+                    }
+
+                    try
+                    {
+                        fileInfo = _fileProvider.GetFileInfo(fullPath);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError("error checking file?", e);
+                        throw;
+                    }
                 }
+
                 using var client = _httpClientFactory.CreateClient();
 
                 using var response = await client.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead);
@@ -108,40 +255,27 @@ namespace ZoomFileManager.Services
 
                 _logger.LogInformation($"File saved as [{fileInfo.PhysicalPath}]");
                 httpRequest.Dispose();
+                return fileInfo;
             }
             catch (Exception e)
             {
-                _logger.LogError($"error during file download", e);
+                _logger.LogError("error during file download", e);
                 throw;
             }
-
-
-
         }
+
         internal async Task<Stream> GetDownloadAsStreamAsync(HttpRequestMessage httpRequest)
         {
             using var client = _httpClientFactory.CreateClient();
 
             var response = await client.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead);
-            _logger.LogDebug($"Sent request", httpRequest);
+            _logger.LogDebug("Sent request", httpRequest);
 
-            if (response.IsSuccessStatusCode)
-            {
-                return await response.Content.ReadAsStreamAsync();
-            }
-            else
-            {
-                _logger.LogError($"Error in download file request", response);
-                throw new HttpRequestException($"Error in download file request, received ${response.StatusCode} in response to ${response.RequestMessage}");
-            }
-        }
+            if (response.IsSuccessStatusCode) return await response.Content.ReadAsStreamAsync();
 
-
-
-        public void Dispose()
-        {
-            _fileProvider.Dispose();
-
+            _logger.LogError("Error in download file request", response);
+            throw new HttpRequestException(
+                $"Error in download file request, received ${response.StatusCode} in response to ${response.RequestMessage}");
         }
     }
 }

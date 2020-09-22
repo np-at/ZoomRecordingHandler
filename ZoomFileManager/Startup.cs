@@ -34,7 +34,7 @@ namespace ZoomFileManager
                 o.DefaultScheme = SchemesNamesConst.TokenAuthenticationDefaultScheme;
             })
             .AddScheme<TokenAuthenticationOptions, TokenAuthenticationHandler>(SchemesNamesConst.TokenAuthenticationDefaultScheme, o => { });
-            services.AddTransient<OneDriveOperationsService>();
+            services.AddScoped<OneDriveOperationsService>();
             services.AddTransient<RecordingManagementService>();
             services.AddTransient<Odru>();
             services.Configure((Action<WebhookRecieverOptions>)(o =>
