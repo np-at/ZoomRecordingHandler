@@ -31,7 +31,7 @@ jobs:
           password: ${{ secrets.password }}
 
       - run: |
-          docker build --file './ZoomRecordingHandler/DockerfileSelfContained' -t '${{ secrets.registry }}/zoomfilemanager:latest' ./
+          docker build --file './ZoomFileManager/DockerfileSelfContained' -t '${{ secrets.registry }}/zoomfilemanager:latest' ./
           docker push '${{ secrets.registry }}/zoomfilemanager:latest'
       
       
