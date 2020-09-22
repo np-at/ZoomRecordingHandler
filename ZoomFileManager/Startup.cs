@@ -8,7 +8,13 @@ using Microsoft.Extensions.Hosting;
 using ZoomFileManager.Services;
 using ZoomFileManager.Controllers;
 using System;
+using System.Net.Http;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Newtonsoft.Json;
+using Serilog;
 using ZoomFileManager.Helpers;
+using ZoomFileManager.Middleware;
 
 namespace ZoomFileManager
 {
@@ -61,7 +67,7 @@ namespace ZoomFileManager
             app.UseRouting();
             app.UseAuthorization();
             app.UseAuthentication();
-
+            app.UseMiddleware<RequestResponseLoggingMiddleware>();
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
