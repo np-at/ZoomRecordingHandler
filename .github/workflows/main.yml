@@ -54,7 +54,7 @@ jobs:
           # Path to the build context
           path: .
           # Path to the Dockerfile (Default is '{path}/Dockerfile')
-          dockerfile: '/ZoomRecordingHandler/DockerfileSelfContained'
+          dockerfile: '${{ github.workspace }}/ZoomRecordingHandler/DockerfileSelfContained'
           # Sets the target stage to build
           # target: # optional
           # Always attempt to pull a newer version of the image
