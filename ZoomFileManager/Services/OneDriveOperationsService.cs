@@ -188,7 +188,7 @@ namespace ZoomFileManager.Services
                 return userList.First();
             if (!userList.Any())
             {
-                Console.WriteLine($"Unable to find user matching {userName}");
+                _logger.LogWarning($"Unable to find user matching {userName}");
                 throw new ArgumentException();
             }
 
@@ -205,7 +205,7 @@ namespace ZoomFileManager.Services
             }
         }
 
-        internal async Task<List<DriveItem>> EnumerateFilesAsync(string user, string? rootDir,
+        private async Task<List<DriveItem>> EnumerateFilesAsync(string user, string? rootDir,
             CancellationToken cancellationToken)
         {
             if (user == null) throw new ArgumentNullException(nameof(user));
