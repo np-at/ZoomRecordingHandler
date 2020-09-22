@@ -103,9 +103,42 @@ namespace ZoomFileManager.Services
                 throw;
             }
 
+            List<Task> uploadTasks = new List<Task>();
             foreach (var file in processedFiles)
             {
-                await _odru.PutFileAsync(file, Path.GetRelativePath(_fileProvider.Root, file.PhysicalPath));
+                var relPath = Path.GetRelativePath(_fileProvider.Root, file.PhysicalPath).Split(file.Name)[0];
+                uploadTasks.Add(_odru.PutFileAsync(file, relPath));
+            }
+
+            var c = Task.WhenAll(uploadTasks);
+            try
+            {
+                await c;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+            finally
+            {
+                List<Exception> exceptions = new List<Exception>();
+                foreach (var file in processedFiles)
+                {
+                    try
+                    {
+                        File.Delete(file.PhysicalPath);
+                    }
+                    catch (Exception e)
+                    {
+                        exceptions.Add(e);
+                        
+                    }
+                }
+
+                if (exceptions.Any())
+                    _logger.LogError("error deleting files", exceptions);
+
             }
             
             
