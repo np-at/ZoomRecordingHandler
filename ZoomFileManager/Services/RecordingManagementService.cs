@@ -53,7 +53,7 @@ namespace ZoomFileManager.Services
                 if (!string.IsNullOrWhiteSpace(webhookEvent.DownloadToken ?? webhookEvent.Payload.DownloadToken))
                     req.Headers.Authorization =
                         AuthenticationHeaderValue.Parse($"Bearer ${webhookEvent.DownloadToken ?? webhookEvent.Payload.DownloadToken}");
-                req.Headers.Add("Accept", "application/json");
+                req.Headers.Add("Accept", "*/*");
                 requests.Add((req, fileNameTransformationFunc(item), folderNameTransformationFunc(webhookEvent)));
                 req.Dispose();
             }
