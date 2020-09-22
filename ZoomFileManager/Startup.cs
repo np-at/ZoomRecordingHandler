@@ -24,25 +24,24 @@ namespace ZoomFileManager
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-           
+
             services.AddHttpClient();
             var fileProvider = new PhysicalFileProvider(Path.GetTempPath());
 
             services.AddSingleton(fileProvider);
-            services.AddAuthentication(o =>
-            {
-                o.DefaultScheme = SchemesNamesConst.TokenAuthenticationDefaultScheme;
-            })
-            .AddScheme<TokenAuthenticationOptions, TokenAuthenticationHandler>(SchemesNamesConst.TokenAuthenticationDefaultScheme, o => { });
+            services.AddAuthentication(o => { o.DefaultScheme = SchemesNamesConst.TokenAuthenticationDefaultScheme; })
+                .AddScheme<TokenAuthenticationOptions, TokenAuthenticationHandler>(
+                    SchemesNamesConst.TokenAuthenticationDefaultScheme, o => { });
             services.AddScoped<OneDriveOperationsService>();
             services.AddTransient<RecordingManagementService>();
             services.AddTransient<Odru>();
-            services.Configure((Action<WebhookRecieverOptions>)(o =>
+            services.Configure((Action<WebhookRecieverOptions>) (o =>
             {
-                o.AllowedTokens =  Configuration.GetSection("AppConfig").GetSection("allowedTokens").Get<string[]>();;
+                o.AllowedTokens = Configuration.GetSection("AppConfig").GetSection("allowedTokens").Get<string[]>();
+                ;
 
             }));
- 
+
             services.Configure<OdruOptions>(x => Configuration.GetSection("AppConfig").Bind("OdruOptions", x));
             services.AddControllers();
         }
@@ -58,7 +57,7 @@ namespace ZoomFileManager
 
             //app.UseHealthChecks(new PathString("healthcheck"));
             //app.UseHttpsRedirection();
-           
+
             app.UseRouting();
             app.UseAuthorization();
             app.UseAuthentication();
@@ -69,5 +68,6 @@ namespace ZoomFileManager
             });
         }
 
+       
     }
 }

@@ -4,7 +4,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
+using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using ZoomFileManager.Models;
 using ZoomFileManager.Services;
@@ -24,13 +26,41 @@ namespace ZoomFileManager.Controllers
             this._logger = logger;
             this._options = options;
         }
+        private async Task HandleApiFallback(HttpContext context)
+        {
 
+            try
+            {
+
+                await using var requestBody = context.Request?.Body ?? throw new HttpRequestException();
+
+                string tempPath = Path.GetTempPath() + Guid.NewGuid().ToString();
+                await using var s = System.IO.File.Create(tempPath);
+                await requestBody.CopyToAsync(s);
+                 _logger.LogWarning($"request contents dumped to {tempPath}");
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+        }
         [HttpPost]
         public IActionResult ReceiveNotification([FromBody] ZoomWebhookEvent webhookEvent, [FromServices] IServiceScopeFactory
                                     serviceScopeFactory, [FromHeader(Name = "Authorization")] string? authKey)
         {
+            if (!ModelState.IsValid)
+            {
+                _ = Task.Run(async () => { await HandleApiFallback(HttpContext); });
+            }
+            
+
             string? remoteHost = HttpContext.Request.Host.ToString();
             _logger.LogDebug($"Received Webhook from ${remoteHost}");
+            
             if (!string.IsNullOrWhiteSpace(authKey) && (_options?.Value?.AllowedTokens?.Contains(authKey) ?? false))
             {
                 try
