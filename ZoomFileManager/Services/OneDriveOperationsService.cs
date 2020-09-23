@@ -13,6 +13,7 @@ using Microsoft.Graph.Auth;
 using Microsoft.Identity.Client;
 using File = System.IO.File;
 using FileSystemInfo = System.IO.FileSystemInfo;
+using ZoomFileManager.Helpers;
 
 namespace ZoomFileManager.Services
 {
@@ -342,7 +343,17 @@ namespace ZoomFileManager.Services
                 // you can use this to track exceptions, not used in this example
                 var exceptions = new List<Exception>();
 
-
+                for (int i = 0; i < 5; i++)
+                {
+                    var fileLocked =  await FileHelpers.IsFileLocked(filePath);
+                    if (!fileLocked)
+                        break;
+                    else
+                    {
+                        _logger.LogInformation($"file {filePath.PhysicalPath} is in use, retrying in 10 seconds");
+                        await Task.Delay(10000);
+                    }
+                }
                 await using var fileStream = filePath.CreateReadStream();
 
                 // avoid dereferencing disposed var later
