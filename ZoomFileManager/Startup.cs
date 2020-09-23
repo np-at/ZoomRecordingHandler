@@ -67,7 +67,7 @@ namespace ZoomFileManager
             app.UseRouting();
             app.UseAuthorization();
             app.UseAuthentication();
-            app.UseMiddleware<RequestResponseLoggingMiddleware>();
+            // app.UseMiddleware<RequestResponseLoggingMiddleware>();
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();

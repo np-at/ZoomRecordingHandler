@@ -27,10 +27,11 @@ namespace ZoomFileManager.Controllers
             _logger = logger;
             _options = options;
         }
-
+      
         private async Task HandleApiFallback(HttpContext context)
         {
             context.Request.EnableBuffering();
+   
             var tempPath = Path.Join(Path.GetTempPath(), "asdf");
              
              try
@@ -71,9 +72,8 @@ namespace ZoomFileManager.Controllers
             // if (!ModelState.IsValid || webhookEvent.Event == null || !webhookEvent.Event.Any())
             //     HandleApiFallback(HttpContext);
 
-
             string? remoteHost = HttpContext.Request.Host.ToString();
-            _logger.LogDebug($"Received Webhook from ${remoteHost}");
+            _logger.LogDebug($"Received Webhook from ${remoteHost} {0}");
 
             if (!string.IsNullOrWhiteSpace(authKey) && (_options?.Value?.AllowedTokens?.Contains(authKey) ?? false))
             {
