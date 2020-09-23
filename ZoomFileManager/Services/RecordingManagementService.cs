@@ -9,6 +9,8 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
+using NodaTime;
+using NodaTime.TimeZones;
 using Serilog;
 using ZoomFileManager.Models;
 
@@ -54,7 +56,7 @@ namespace ZoomFileManager.Services
                 //     req.Headers.Authorization =
                 //         AuthenticationHeaderValue.Parse($"Bearer ${webhookEvent.DownloadToken ?? webhookEvent.Payload.DownloadToken}");
                 req.Headers.Add("authorization",
-                    $"Bearer {(webhookEvent.DownloadToken ?? webhookEvent.Payload.DownloadToken)}");
+                    $"Bearer {webhookEvent.DownloadToken ?? webhookEvent.Payload.DownloadToken}");
                 req.Headers.Add("Accept", "*/*");
                 // req.Headers.Add("content-type", "application/json");
                 if (item == null)
@@ -71,20 +73,33 @@ namespace ZoomFileManager.Services
 
         private string ExampleFolderNameTransformationFunc(ZoomWebhookEvent webhookEvent)
         {
+            DateTimeZone usingTimeZone;
+            try
+            {
+                usingTimeZone =
+                    DateTimeZoneProviders.Tzdb[webhookEvent.Payload?.Object?.Timezone ?? "America/Los_Angeles"];
+            }
+            catch (DateTimeZoneNotFoundException)
+            {
+                usingTimeZone = DateTimeZoneProviders.Tzdb["America/Los_Angeles"];
+            }
+
+            var offset = usingTimeZone.GetUtcOffset(new Instant());
+            var offsetSpan = offset.ToTimeSpan();
             string st =
-                $"{webhookEvent?.Payload?.Object?.StartTime.ToLocalTime().ToString("yy_MM_dd-hhmm-", CultureInfo.InvariantCulture)}{webhookEvent?.Payload?.Object?.Topic ?? "___"}-{webhookEvent?.Payload?.Object?.HostEmail ?? webhookEvent?.Payload?.AccountId ?? "_____"}";
-            return _invalidFileNameChars.Replace(st, string.Empty);
+                $"{webhookEvent?.Payload?.Object?.StartTime.ToUniversalTime().Add(offsetSpan).ToString("yy_MM_dd-HHmm-", CultureInfo.InvariantCulture)}{webhookEvent?.Payload?.Object?.Topic ?? "Recording"}-{webhookEvent?.Payload?.Object?.HostEmail ?? webhookEvent?.Payload?.AccountId ?? string.Empty}";
+            return _invalidFileNameChars.Replace(st, string.Empty).Replace(" ", "_");
         }
 
         private string ExampleNameTransformationFunc(RecordingFile recordingFile)
         {
             var sb = new StringBuilder();
-            sb.Append(recordingFile?.Id ?? recordingFile?.FileType ?? "");
+            sb.Append(recordingFile?.Id ?? recordingFile?.FileType ?? string.Empty);
             sb.Append(
-                recordingFile?.RecordingStart.ToLocalTime().ToString("T", CultureInfo.InvariantCulture) ?? "___");
+                recordingFile?.RecordingStart.ToLocalTime().ToString("T", CultureInfo.InvariantCulture) ?? "_");
             sb.Append("." + recordingFile?.FileType);
 
-            return _invalidFileNameChars.Replace(sb.ToString(), string.Empty);
+            return _invalidFileNameChars.Replace(sb.ToString(), string.Empty).Replace(" ", "_");
         }
 
         internal async Task DownloadFilesFromWebookAsync(ZoomWebhookEvent webhookEvent)
@@ -171,7 +186,6 @@ namespace ZoomFileManager.Services
             return false;
         }
 
-        
 
         /// <summary>
         /// </summary>
@@ -265,7 +279,8 @@ namespace ZoomFileManager.Services
                         await using var fs = File.Create(fileInfo.PhysicalPath);
                         using var client = _httpClientFactory.CreateClient();
 
-                        using var response = await client?.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead);
+                        using var response =
+                            await client?.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead);
                         await using var stream = await response.Content.ReadAsStreamAsync();
                         //stream.Seek(0, SeekOrigin.Begin);
 
@@ -274,15 +289,14 @@ namespace ZoomFileManager.Services
                         _logger.LogInformation($"File saved as [{fileInfo.PhysicalPath}]");
                         return fileInfo;
                     }
-                    catch (System.IO.IOException e)
+                    catch (IOException e)
                     {
-                        _logger.LogError($"IO ERROR", e);
-                        
+                        _logger.LogError("IO ERROR", e);
                     }
 
                     await Task.Delay(1000);
-
                 }
+
                 throw new IOException("Failed ot create file after 5 attempts");
             }
             catch (Exception e)
