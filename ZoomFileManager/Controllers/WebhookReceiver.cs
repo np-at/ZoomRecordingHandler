@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Pipelines;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -71,9 +72,9 @@ namespace ZoomFileManager.Controllers
         {
             // if (!ModelState.IsValid || webhookEvent.Event == null || !webhookEvent.Event.Any())
             //     HandleApiFallback(HttpContext);
-
+            var jsonString = JsonSerializer.Serialize(webhookEvent);
             string? remoteHost = HttpContext.Request.Host.ToString();
-            _logger.LogDebug($"Received Webhook from ${remoteHost} {0}");
+            _logger.LogDebug($"Received Webhook from {remoteHost} {jsonString}");
 
             if (!string.IsNullOrWhiteSpace(authKey) && (_options?.Value?.AllowedTokens?.Contains(authKey) ?? false))
             {
