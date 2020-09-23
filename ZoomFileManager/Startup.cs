@@ -10,6 +10,8 @@ using ZoomFileManager.Controllers;
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Hangfire;
+using Hangfire.Storage.SQLite;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using Serilog;
@@ -30,8 +32,13 @@ namespace ZoomFileManager
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-
+            services.AddHangfire(configuration => configuration.UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings().UseSQLiteStorage().UseSerilogLogProvider());
             services.AddHttpClient();
+            services.AddHangfireServer(o =>
+            {
+                o.WorkerCount = 4;
+            });
             var fileProvider = new PhysicalFileProvider(Path.GetTempPath());
 
             services.AddSingleton(fileProvider);

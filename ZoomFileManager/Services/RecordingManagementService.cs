@@ -200,6 +200,8 @@ namespace ZoomFileManager.Services
             string? relativePath,
             bool force = false, bool failOnExists = false)
         {
+            if (fileName == null)
+                throw new ArgumentNullException(nameof(fileName));
             try
             {
                 for (int i = 0; i < 5; i++)
@@ -293,6 +295,11 @@ namespace ZoomFileManager.Services
                     catch (IOException e)
                     {
                         _logger.LogError("IO ERROR", e);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError($"misc error encountered while creating file",ex);
+                        throw;
                     }
 
                     await Task.Delay(1000);
