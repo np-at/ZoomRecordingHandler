@@ -95,7 +95,7 @@ namespace ZoomFileManager.Models
         /// Unique Identifier of the Meeting/ Webinar that was being recorded.
         /// </summary>
         [JsonPropertyName("id")]
-        public int Id { get; set; }
+        public long Id { get; set; }
 
         /// <summary>
         /// The number of recording files recovered.
