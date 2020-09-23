@@ -220,7 +220,7 @@ namespace ZoomFileManager.Services
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e);
+                    _logger.LogError($"error while getting file info", e);
                     throw;
                 }
                 try
@@ -284,7 +284,7 @@ namespace ZoomFileManager.Services
                 }
 
                 using var client = _httpClientFactory.CreateClient();
-
+    
                 using var response = await client?.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead);
                 await using var stream = await response.Content.ReadAsStreamAsync();
 
