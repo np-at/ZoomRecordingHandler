@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
+using Serilog;
 using ZoomFileManager.Models;
 
 namespace ZoomFileManager.Services
@@ -38,24 +39,29 @@ namespace ZoomFileManager.Services
             _fileProvider.Dispose();
         }
 
-        private IEnumerable<(HttpRequestMessage requestMessage, string fileName, string? folderName)>
+        private static IEnumerable<(HttpRequestMessage requestMessage, string fileName, string? folderName)>
             GenerateZoomApiRequestsFromWebhook(ZoomWebhookEvent webhookEvent,
                 Func<RecordingFile, string> fileNameTransformationFunc,
                 Func<ZoomWebhookEvent, string> folderNameTransformationFunc)
         {
-            if (webhookEvent.Payload?.Object?.RecordingFiles == null)
-                throw new NullReferenceException();
+            if (webhookEvent?.Payload?.Object?.RecordingFiles == null)
+                throw new NullReferenceException("webhook event was null somehow");
 
             var requests = new List<(HttpRequestMessage requestMessage, string name, string? folderName)>();
             foreach (var item in webhookEvent.Payload.Object.RecordingFiles)
             {
-                var req = new HttpRequestMessage(HttpMethod.Get, item.DownloadUrl);
+                var req = new HttpRequestMessage(HttpMethod.Get, item?.DownloadUrl ?? string.Empty);
                 // if (!string.IsNullOrWhiteSpace(webhookEvent.DownloadToken ?? webhookEvent.Payload.DownloadToken))
                 //     req.Headers.Authorization =
                 //         AuthenticationHeaderValue.Parse($"Bearer ${webhookEvent.DownloadToken ?? webhookEvent.Payload.DownloadToken}");
                 req.Headers.Add("authorization", $"Bearer {(webhookEvent.DownloadToken ?? webhookEvent.Payload.DownloadToken).ToString()}");
                 req.Headers.Add("Accept", "*/*");
                 // req.Headers.Add("content-type", "application/json");
+                if (item == null)
+                {
+                    Log.Error("null Recording file, wtf?");
+                    continue;
+                }
                 requests.Add((req, fileNameTransformationFunc(item), folderNameTransformationFunc(webhookEvent)));
             }
 
