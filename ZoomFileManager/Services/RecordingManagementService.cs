@@ -50,12 +50,13 @@ namespace ZoomFileManager.Services
             foreach (var item in webhookEvent.Payload.Object.RecordingFiles)
             {
                 var req = new HttpRequestMessage(HttpMethod.Get, item.DownloadUrl);
-                if (!string.IsNullOrWhiteSpace(webhookEvent.DownloadToken ?? webhookEvent.Payload.DownloadToken))
-                    req.Headers.Authorization =
-                        AuthenticationHeaderValue.Parse($"Bearer ${webhookEvent.DownloadToken ?? webhookEvent.Payload.DownloadToken}");
+                // if (!string.IsNullOrWhiteSpace(webhookEvent.DownloadToken ?? webhookEvent.Payload.DownloadToken))
+                //     req.Headers.Authorization =
+                //         AuthenticationHeaderValue.Parse($"Bearer ${webhookEvent.DownloadToken ?? webhookEvent.Payload.DownloadToken}");
+                req.Headers.Add("authorization", $"Bearer {(webhookEvent.DownloadToken ?? webhookEvent.Payload.DownloadToken).ToString()}");
                 req.Headers.Add("Accept", "*/*");
+                // req.Headers.Add("content-type", "application/json");
                 requests.Add((req, fileNameTransformationFunc(item), folderNameTransformationFunc(webhookEvent)));
-                req.Dispose();
             }
 
             return requests.ToArray();
@@ -88,7 +89,7 @@ namespace ZoomFileManager.Services
             foreach ((var requestMessage, var fileName, string? folderName) in requests)
             {
                 tasks.Add(DownloadFileAsync(requestMessage, fileName, folderName));
-                requestMessage.Dispose();
+                // requestMessage.Dispose();
             }
 
             var t = Task.WhenAll(tasks);
@@ -231,7 +232,7 @@ namespace ZoomFileManager.Services
                     if (failOnExists)
                     {
                         _logger.LogError("File already exists.  Set 'failOnExists' = false to avoid this behavior");
-                        httpRequest.Dispose();
+                        // httpRequest.Dispose();
                         throw new IOException();
                     }
 
@@ -278,7 +279,7 @@ namespace ZoomFileManager.Services
 
                 using var client = _httpClientFactory.CreateClient();
 
-                using var response = await client.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead);
+                using var response = await client?.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead);
                 await using var stream = await response.Content.ReadAsStreamAsync();
 
                 await using var fs = File.Create(fileInfo.PhysicalPath);
@@ -287,7 +288,6 @@ namespace ZoomFileManager.Services
                 await stream.CopyToAsync(fs);
 
                 _logger.LogInformation($"File saved as [{fileInfo.PhysicalPath}]");
-                httpRequest.Dispose();
                 return fileInfo;
             }
             catch (Exception e)

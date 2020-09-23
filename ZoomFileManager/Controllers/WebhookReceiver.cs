@@ -81,9 +81,19 @@ namespace ZoomFileManager.Controllers
                 {
                     _ = Task.Run(async () =>
                     {
-                        using var scope = serviceScopeFactory.CreateScope();
-                        using var recService = scope.ServiceProvider.GetRequiredService<RecordingManagementService>();
-                        await recService.DownloadFilesFromWebookAsync(webhookEvent).ConfigureAwait(false);
+                        try
+                        {
+
+                            using var scope = serviceScopeFactory.CreateScope();
+                            using var recService = scope.ServiceProvider.GetRequiredService<RecordingManagementService>();
+                            await recService.DownloadFilesFromWebookAsync(webhookEvent).ConfigureAwait(false);
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e);
+                            throw;
+                            
+                        }
                     });
 
                     return NoContent();
