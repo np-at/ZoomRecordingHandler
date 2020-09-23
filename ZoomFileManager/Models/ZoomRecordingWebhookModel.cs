@@ -77,7 +77,7 @@ namespace ZoomFileManager.Models
         /// Duration of the recording.
         /// </summary>
         [JsonPropertyName("duration")]
-        public int Duration { get; set; }
+        public long Duration { get; set; }
 
         /// <summary>
         /// Email address of the host.
@@ -137,7 +137,7 @@ namespace ZoomFileManager.Models
         /// The total size of the recording in bytes.
         /// </summary>
         [JsonPropertyName("total_size")]
-        public int TotalSize { get; set; }
+        public long TotalSize { get; set; }
 
         /// <summary>
         /// Meeting or Webinar Types.
@@ -176,7 +176,7 @@ namespace ZoomFileManager.Models
         /// The size of the recording file in bytes.
         /// </summary>
         [JsonPropertyName("file_size")]
-        public int FileSize { get; set; }
+        public long FileSize { get; set; }
 
         /// <summary>
         /// The type of file.
