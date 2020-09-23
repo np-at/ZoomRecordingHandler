@@ -22,7 +22,7 @@ namespace ZoomFileManager.Services
         private readonly Regex _extensionRegex = new Regex("\\.[^.]+$");
         private readonly PhysicalFileProvider _fileProvider;
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly Regex _invalidFileNameChars = new Regex("[\\\\/:\"*?<>|]+'");
+        private readonly Regex _invalidFileNameChars = new Regex("[\\\\/:\"*?<>|'`]+");
         private readonly ILogger<RecordingManagementService> _logger;
         private readonly Odru _odru;
 
@@ -208,15 +208,7 @@ namespace ZoomFileManager.Services
                 {
                     string? fullPath = Path.Join(relativePath, fileName);
                     IFileInfo fileInfo;
-                    try
-                    {
-                        fileInfo = _fileProvider.GetFileInfo(fullPath);
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError("error while getting file info", e);
-                        throw;
-                    }
+                  
 
                     try
                     {
@@ -227,7 +219,15 @@ namespace ZoomFileManager.Services
                         _logger.LogError("Error creating directory", e);
                         throw;
                     }
-
+                    try
+                    {
+                        fileInfo = _fileProvider.GetFileInfo(fullPath);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError("error while getting file info", e);
+                        throw;
+                    }
                     if (fileInfo.Exists)
                     {
                         if (failOnExists)
