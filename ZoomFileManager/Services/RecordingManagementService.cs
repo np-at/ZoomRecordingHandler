@@ -65,17 +65,17 @@ namespace ZoomFileManager.Services
         private string ExampleFolderNameTransformationFunc(ZoomWebhookEvent webhookEvent)
         {
             string st =
-                $"{webhookEvent.Payload.Object.StartTime.ToLocalTime().ToString("yy_MM_dd-hhmm-", CultureInfo.InvariantCulture)}{webhookEvent.Payload.Object.Topic}-{webhookEvent.Payload.Object.HostEmail}";
+                $"{webhookEvent?.Payload?.Object?.StartTime.ToLocalTime().ToString("yy_MM_dd-hhmm-", CultureInfo.InvariantCulture)}{webhookEvent?.Payload?.Object?.Topic ?? "___"}-{webhookEvent?.Payload?.Object?.HostEmail ?? webhookEvent?.Payload?.AccountId ?? "_____"}";
             return _invalidFileNameChars.Replace(st, string.Empty);
         }
 
         private string ExampleNameTransformationFunc(RecordingFile recordingFile)
         {
             var sb = new StringBuilder();
-            sb.Append(recordingFile.Id);
+            sb.Append(recordingFile?.Id ?? recordingFile?.FileType ?? "");
             sb.Append(
-                recordingFile.RecordingStart.ToLocalTime().ToString("T", CultureInfo.InvariantCulture));
-            sb.Append("." + recordingFile.FileType);
+                recordingFile?.RecordingStart.ToLocalTime().ToString("T", CultureInfo.InvariantCulture) ?? "___");
+            sb.Append("." + recordingFile?.FileType);
             
             return _invalidFileNameChars.Replace(sb.ToString(), string.Empty);
         }
