@@ -350,8 +350,11 @@ namespace ZoomFileManager.Services
                         break;
                     else
                     {
-                        _logger.LogInformation($"file {filePath.PhysicalPath} is in use, retrying in 10 seconds");
-                        await Task.Delay(10000);
+                        var d = new Random();
+                        var delay = 10000 + d.Next(10000);
+                        _logger.LogInformation($"file {filePath.PhysicalPath} is in use, retrying in {delay/1000} seconds");
+
+                        await Task.Delay(delay);
                     }
                 }
                 await using var fileStream = filePath.CreateReadStream();
