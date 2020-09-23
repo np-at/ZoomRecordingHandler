@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using NodaTime;
+using NodaTime.Extensions;
 using NodaTime.TimeZones;
 using Serilog;
 using ZoomFileManager.Models;
@@ -21,7 +22,7 @@ namespace ZoomFileManager.Services
         private readonly Regex _extensionRegex = new Regex("\\.[^.]+$");
         private readonly PhysicalFileProvider _fileProvider;
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly Regex _invalidFileNameChars = new Regex("[\\\\/:\"*?<>|]+");
+        private readonly Regex _invalidFileNameChars = new Regex("[\\\\/:\"*?<>|]+'");
         private readonly ILogger<RecordingManagementService> _logger;
         private readonly Odru _odru;
 
@@ -84,10 +85,10 @@ namespace ZoomFileManager.Services
                 usingTimeZone = DateTimeZoneProviders.Tzdb["America/Los_Angeles"];
             }
 
-            var offset = usingTimeZone.GetUtcOffset(new Instant());
+            var offset = usingTimeZone.GetUtcOffset(webhookEvent.Payload?.Object?.StartTime.ToInstant() ?? new Instant());
             var offsetSpan = offset.ToTimeSpan();
             string st =
-                $"{webhookEvent?.Payload?.Object?.StartTime.ToUniversalTime().Add(offsetSpan).ToString("yy_MM_dd-HHmm-", CultureInfo.InvariantCulture)}{webhookEvent?.Payload?.Object?.Topic ?? "Recording"}-{webhookEvent?.Payload?.Object?.HostEmail ?? webhookEvent?.Payload?.AccountId ?? string.Empty}";
+                $"{webhookEvent?.Payload?.Object?.StartTime.UtcDateTime.Add(offsetSpan).ToString("yy_MM_dd-HHmm-", CultureInfo.InvariantCulture)}{webhookEvent?.Payload?.Object?.Topic ?? "Recording"}-{webhookEvent?.Payload?.Object?.HostEmail ?? webhookEvent?.Payload?.AccountId ?? string.Empty}";
             return _invalidFileNameChars.Replace(st, string.Empty).Replace(" ", "_");
         }
 
