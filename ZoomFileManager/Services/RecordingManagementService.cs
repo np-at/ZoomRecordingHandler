@@ -123,7 +123,7 @@ namespace ZoomFileManager.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                _logger.LogError("Error processing uploads", e);
                 throw;
             }
             finally
@@ -261,8 +261,8 @@ namespace ZoomFileManager.Services
                     }
 
                     try
-                    { 
-                        var fs = File.Create(fileInfo.PhysicalPath);
+                    {
+                        await using var fs = File.Create(fileInfo.PhysicalPath);
                         using var client = _httpClientFactory.CreateClient();
 
                         using var response = await client?.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead);
@@ -296,7 +296,7 @@ namespace ZoomFileManager.Services
         {
             using var client = _httpClientFactory.CreateClient();
 
-            var response = await client.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead);
+            using var response = await client.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead);
             _logger.LogDebug("Sent request", httpRequest);
 
             if (response.IsSuccessStatusCode) return await response.Content.ReadAsStreamAsync();
