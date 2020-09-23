@@ -14,6 +14,7 @@ using Microsoft.Identity.Client;
 using File = System.IO.File;
 using FileSystemInfo = System.IO.FileSystemInfo;
 using ZoomFileManager.Helpers;
+using static System.String;
 
 namespace ZoomFileManager.Services
 {
@@ -218,7 +219,7 @@ namespace ZoomFileManager.Services
 
             try
             {
-                if (rootDir != null)
+                if (!IsNullOrWhiteSpace(rootDir))
                     drive = _gs.Users[user].Drive.Root.ItemWithPath(rootDir).Children
                         .Request();
                 else
@@ -337,7 +338,7 @@ namespace ZoomFileManager.Services
             {
                 // where you want to save the file, with name
                 string itemPath =
-                    $"/{_rootUploadPath}/{(string.IsNullOrWhiteSpace(relativePath) ? null : (relativePath.Trim('/') + '/'))}{filePath.Name}";
+                    $"/{_rootUploadPath}/{(IsNullOrWhiteSpace(relativePath) ? null : (relativePath.Trim('/') + '/'))}{filePath.Name}";
 
 
                 // you can use this to track exceptions, not used in this example
