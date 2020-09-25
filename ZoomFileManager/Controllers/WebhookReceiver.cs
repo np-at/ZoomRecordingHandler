@@ -1,13 +1,11 @@
 ﻿using System;
 using System.IO;
-using System.IO.Pipelines;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -50,7 +48,7 @@ namespace ZoomFileManager.Controllers
                  buff.Position = 0;
                  using var rdr = new StreamReader(buff);
                  var sti = await rdr.ReadToEndAsync();
-                 var str = System.Text.Encoding.UTF8.GetString(result);
+                 var str = Encoding.UTF8.GetString(result);
                  await wrt.WriteAsync(str);
                  Console.WriteLine(sti);
                  _logger.LogWarning($"request contents dumped to {tempPath}");

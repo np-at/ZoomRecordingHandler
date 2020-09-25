@@ -8,19 +8,11 @@ using Microsoft.Extensions.Hosting;
 using ZoomFileManager.Services;
 using ZoomFileManager.Controllers;
 using System;
-using System.Net.Http;
-using System.Threading.Tasks;
-using Hangfire;
-using Hangfire.Storage.SQLite;
-using Microsoft.AspNetCore.Http;
-using Newtonsoft.Json;
-using Serilog;
 using ZoomFileManager.Helpers;
-using ZoomFileManager.Middleware;
 
 namespace ZoomFileManager
 {
-    public partial class Startup
+    public class Startup
     {
         public Startup(IConfiguration configuration)
         {
@@ -32,13 +24,14 @@ namespace ZoomFileManager
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddHangfire(configuration => configuration.UseSimpleAssemblyNameTypeSerializer()
-                .UseRecommendedSerializerSettings().UseSQLiteStorage().UseSerilogLogProvider());
+            // services.AddHangfire(configuration => configuration.UseSimpleAssemblyNameTypeSerializer()
+            //     .UseRecommendedSerializerSettings().UseSQLiteStorage().UseSerilogLogProvider());
+            // services.AddHangfireServer(o =>
+            // {
+            //     o.WorkerCount = 4;
+            // });
             services.AddHttpClient();
-            services.AddHangfireServer(o =>
-            {
-                o.WorkerCount = 4;
-            });
+
             var fileProvider = new PhysicalFileProvider(Path.GetTempPath());
 
             services.AddSingleton(fileProvider);
@@ -51,8 +44,6 @@ namespace ZoomFileManager
             services.Configure((Action<WebhookRecieverOptions>) (o =>
             {
                 o.AllowedTokens = Configuration.GetSection("AppConfig").GetSection("allowedTokens").Get<string[]>();
-                ;
-
             }));
 
             services.Configure<OdruOptions>(x => Configuration.GetSection("AppConfig").Bind("OdruOptions", x));

@@ -15,7 +15,10 @@ FROM build AS publish
 RUN dotnet publish "ZoomFileManager.csproj" -c Release -r "linux-musl-x64" -o /app/publish
 
 FROM base AS final
+ARG BUILD_ENV=prod
+ENV NODE_ENV=production
+
 WORKDIR /app
 COPY --from=publish /app/publish .
-RUN ln -f -s /run/secrets/zoomFileManager_settings appsettings.json
+RUN if [ "${BUILD_ENV}" = "prod" ]; then ln -f -s /run/secrets/zoomFileManager_settings appsettings.json; fi
 ENTRYPOINT ["dotnet", "ZoomFileManager.dll"]

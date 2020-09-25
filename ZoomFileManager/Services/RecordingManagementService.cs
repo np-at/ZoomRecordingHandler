@@ -128,7 +128,7 @@ namespace ZoomFileManager.Services
             List<Task> uploadTasks = new List<Task>();
             foreach (var file in processedFiles)
             {
-                string? relPath = Path.GetRelativePath(_fileProvider.Root, file.PhysicalPath).Split(file.Name)[0];
+                string relPath = Path.GetRelativePath(_fileProvider.Root, file.PhysicalPath).Split(file.Name)[0];
                 uploadTasks.Add(_odru.PutFileAsync(file, relPath));
             }
 
@@ -284,6 +284,8 @@ namespace ZoomFileManager.Services
 
                         using var response =
                             await client?.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead);
+                        if (!response.IsSuccessStatusCode)
+                            response.EnsureSuccessStatusCode();
                         await using var stream = await response.Content.ReadAsStreamAsync();
                         //stream.Seek(0, SeekOrigin.Begin);
 

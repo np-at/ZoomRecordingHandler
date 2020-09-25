@@ -18,12 +18,10 @@ namespace ZoomFileManager
             try
             {
                 CreateHostBuilder(args).Build().Run();
-                return;
             }
             catch (Exception ex)
             {
                 Log.Fatal(ex, "Host terminated unexpectedly");
-                return;
             }
             finally
             {
@@ -35,7 +33,7 @@ namespace ZoomFileManager
             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
             .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
             .AddEnvironmentVariables()
-            .AddJsonFile($"/run/secrets/zoomFileManager_settings", (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production") == "Development")
+            .AddJsonFile("/run/secrets/zoomFileManager_settings", true)
 
             .Build();
 

@@ -70,7 +70,7 @@ namespace ZoomFileManager.Services
         private readonly IOptions<OdruOptions> _options;
         private readonly string? _rootUploadPath;
         private readonly string _userName;
-        private static GraphServiceClient? _gs;
+        private GraphServiceClient? _gs;
         private User? _user;
 
         public Odru(ILogger<Odru> logger, IOptions<OdruOptions> options)
