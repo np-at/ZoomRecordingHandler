@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
@@ -103,7 +104,7 @@ namespace ZoomFileManager.Services
             return _invalidFileNameChars.Replace(sb.ToString(), string.Empty).Replace(" ", "_");
         }
 
-        internal async Task DownloadFilesFromWebookAsync(ZoomWebhookEvent webhookEvent)
+        internal async Task DownloadFilesFromWebookAsync(ZoomWebhookEvent webhookEvent, CancellationToken ct = default)
         {
             var requests = GenerateZoomApiRequestsFromWebhook(webhookEvent, ExampleNameTransformationFunc,
                 ExampleFolderNameTransformationFunc);
