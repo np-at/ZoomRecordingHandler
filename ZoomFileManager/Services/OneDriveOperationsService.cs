@@ -55,9 +55,9 @@ namespace ZoomFileManager.Services
 
     public class OdruOptions
     {
-        public string ClientId { get; set; }
-        public string ClientSecret { get; set; }
-        public string TenantId { get; set; }
+        public string? ClientId { get; set; }
+        public string? ClientSecret { get; set; }
+        public string? TenantId { get; set; }
         public string? UserName { get; set; }
 
         public string? RootDirectory { get; set; }
@@ -65,13 +65,11 @@ namespace ZoomFileManager.Services
 
     public partial class Odru
     {
-        private readonly bool _enumerateFiles = false;
         private readonly ILogger<Odru> _logger;
         private readonly IOptions<OdruOptions> _options;
         private readonly string? _rootUploadPath;
         private readonly string _userName;
         private GraphServiceClient? _gs;
-        private User? _user;
 
         public Odru(ILogger<Odru> logger, IOptions<OdruOptions> options)
         {
@@ -85,36 +83,6 @@ namespace ZoomFileManager.Services
         public async Task PutFileAsync(IFileInfo fileInfo, string? relativePath)
         {
             await UploadTask(_userName, fileInfo, relativePath);
-        }
-
-        private async Task<int> RunThis(IFileInfo file, CancellationToken cancellationToken)
-        {
-            // Get user reference from graph api
-            _user = await GetUserAsync(_userName);
-            Console.WriteLine(_user.UserPrincipalName);
-            try
-            {
-                if (_enumerateFiles)
-                {
-                    var results = await EnumerateFilesAsync(_user.Id, _rootUploadPath, cancellationToken);
-                    foreach (var driveItem in results)
-                    {
-                        Console.WriteLine(driveItem.Name);
-                    }
-                }
-                else
-                    await UploadTask(_user.Id, file, null);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-                throw;
-            }
-
-            //var filePath = $"{Environment.CurrentDirectory}/sample.pdf";
-
-
-            return 0;
         }
 
         #region RefCode
