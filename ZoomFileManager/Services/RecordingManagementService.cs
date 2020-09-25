@@ -25,7 +25,8 @@ namespace ZoomFileManager.Services
 {
     public class RecordingManagementServiceOptions
     {
-        public string[] NotificationWebhook { get; set; } = Array.Empty<string>();
+        public string[] Endpoints { get; set; } = Array.Empty<string>();
+        public string? ReferralUrlBase { get; set; }
     }
     public class RecordingManagementService : IDisposable
     {
@@ -148,16 +149,15 @@ namespace ZoomFileManager.Services
             try
             {
                 var items = await c;
-                if (_serviceOptions.NotificationWebhook.Any())
+                if (_serviceOptions.Endpoints.Any())
                 {
                     if (items.All(x => x.UploadSucceeded))
                     {
                         
-                        var folderRef = await _odru.GetParentItemAsync(items.Last().ItemResponse, ct);
-                        string uploadFolderUrl = folderRef.WebUrl ?? string.Empty;
+                        string itemResponseWebUrl = items.Last().ItemResponse.WebUrl;
                         string? message =
-                            $"Successfully uploaded recording: {webhookEvent.Payload.Object.Topic}. You can view them using this url: {uploadFolderUrl}";
-                        foreach (string notificationEndpoint in _serviceOptions.NotificationWebhook)
+                            $"Successfully uploaded recording: {webhookEvent.Payload.Object.Topic}. You can view them using this url: {_serviceOptions.ReferralUrlBase + itemResponseWebUrl.Remove(itemResponseWebUrl.LastIndexOf('/'))}";
+                        foreach (string notificationEndpoint in _serviceOptions.Endpoints)
                         {
                             await SendWebhookNotification(notificationEndpoint, message);
                         }

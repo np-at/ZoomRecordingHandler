@@ -3,12 +3,14 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ZoomFileManager.BackgroundServices;
 using ZoomFileManager.Models;
 using ZoomFileManager.Services;
 
@@ -20,11 +22,12 @@ namespace ZoomFileManager.Controllers
     {
         private readonly ILogger<WebhookReceiver> _logger;
         private readonly IOptions<WebhookRecieverOptions> _options;
-
-        public WebhookReceiver(ILogger<WebhookReceiver> logger, IOptions<WebhookRecieverOptions> options)
+        private readonly ProcessingChannel _processingChannel;
+        public WebhookReceiver(ILogger<WebhookReceiver> logger, IOptions<WebhookRecieverOptions> options, ProcessingChannel processingChannel)
         {
             _logger = logger;
             _options = options;
+            _processingChannel = processingChannel;
         }
       
         private async Task HandleApiFallback(HttpContext context)
@@ -63,6 +66,28 @@ namespace ZoomFileManager.Controllers
              context.Response.StatusCode = StatusCodes.Status404NotFound;
          }
 
+        [HttpPost("v2")]
+        public async Task<IActionResult> ReceiveNotificationV2([FromBody] ZoomWebhookEvent webhookEvent, CancellationToken cancellationToken)
+        {
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(TimeSpan.FromSeconds(3));
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var eventAdded = await _processingChannel.AddFileAsync(webhookEvent.DownloadToken, cts.Token);
+                    if (eventAdded)
+                    {
+                        return new OkResult();
+                    }
+                }
+                catch (OperationCanceledException) when (cts.IsCancellationRequested)
+                {
+                  // ignore
+                }
+            }
+            return new BadRequestResult();
+        }
         [HttpPost]
         public IActionResult ReceiveNotification([FromBody] ZoomWebhookEvent webhookEvent, [FromServices]
             IServiceScopeFactory

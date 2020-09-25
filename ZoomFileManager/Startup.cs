@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -5,11 +6,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
-using ZoomFileManager.Services;
-using ZoomFileManager.Controllers;
-using System;
 using ZoomFileManager.BackgroundServices;
+using ZoomFileManager.Controllers;
 using ZoomFileManager.Helpers;
+using ZoomFileManager.Services;
 
 namespace ZoomFileManager
 {
@@ -31,7 +31,7 @@ namespace ZoomFileManager
             {
                 try
                 {
-                    x.NotificationWebhook = appConfigOptions.GetSection("notificationEndpoints").Get<string[]>();
+                    appConfigOptions.Bind("NotificationOptions", x);
                 }
                 catch (Exception)
                 {
@@ -42,8 +42,8 @@ namespace ZoomFileManager
             {
                 o.AllowedTokens = Configuration.GetSection("AppConfig").GetSection("allowedTokens").Get<string[]>();
             }));
-           
-            services.Configure<OdruOptions>(x => Configuration.GetSection("AppConfig").Bind("OdruOptions", x));
+
+            services.Configure<OdruOptions>(x => appConfigOptions.Bind("OdruOptions", x));
             var fileProvider = new PhysicalFileProvider(Path.GetTempPath());
             services.AddSingleton<ProcessingChannel>();
             services.AddSingleton(fileProvider);
@@ -53,18 +53,14 @@ namespace ZoomFileManager
             services.AddTransient<OneDriveOperationsService>();
             services.AddTransient<RecordingManagementService>();
             services.AddTransient<Odru>();
-      
+
             services.AddControllers();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
+            if (env.IsDevelopment()) app.UseDeveloperExceptionPage();
 
             //app.UseHealthChecks(new PathString("healthcheck"));
             //app.UseHttpsRedirection();
@@ -73,12 +69,7 @@ namespace ZoomFileManager
             app.UseAuthorization();
             app.UseAuthentication();
             // app.UseMiddleware<RequestResponseLoggingMiddleware>();
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapControllers();
-            });
+            app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
         }
-
-       
     }
 }

@@ -78,6 +78,7 @@ namespace ZoomFileManager.Services
             _userName = options.Value.UserName ?? throw new Exception();
             this._options = options;
             _gs = new GraphServiceClient(DoAuth(options.Value));
+           
         }
 
         public async Task<UploadResult<DriveItem>> PutFileAsync(IFileInfo fileInfo, string? relativePath)
