@@ -5,19 +5,28 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Microsoft.Graph;
 using NodaTime;
 using NodaTime.Extensions;
 using NodaTime.TimeZones;
 using Serilog;
 using ZoomFileManager.Models;
+using Directory = System.IO.Directory;
+using File = System.IO.File;
 
 namespace ZoomFileManager.Services
 {
+    public class RecordingManagementServiceOptions
+    {
+        public string[] NotificationWebhook { get; set; } = Array.Empty<string>();
+    }
     public class RecordingManagementService : IDisposable
     {
         private readonly Regex _extensionRegex = new Regex("\\.[^.]+$");
@@ -26,14 +35,16 @@ namespace ZoomFileManager.Services
         private readonly Regex _invalidFileNameChars = new Regex("[\\\\/:\"*?<>|'`]+");
         private readonly ILogger<RecordingManagementService> _logger;
         private readonly Odru _odru;
+        private readonly RecordingManagementServiceOptions _serviceOptions;
 
         public RecordingManagementService(ILogger<RecordingManagementService> logger,
-            IHttpClientFactory httpClientFactory, PhysicalFileProvider fileProvider, Odru odru)
+            IHttpClientFactory httpClientFactory, PhysicalFileProvider fileProvider, Odru odru, IOptions<RecordingManagementServiceOptions>? serviceOptions)
         {
             _logger = logger;
             _httpClientFactory = httpClientFactory;
             _fileProvider = fileProvider;
             _odru = odru;
+            _serviceOptions = serviceOptions?.Value ?? new RecordingManagementServiceOptions();
         }
 
 
@@ -126,7 +137,7 @@ namespace ZoomFileManager.Services
                 throw;
             }
 
-            List<Task> uploadTasks = new List<Task>();
+            List<Task<UploadResult<DriveItem>>> uploadTasks = new List<Task<UploadResult<DriveItem>>>();
             foreach (var file in processedFiles)
             {
                 string relPath = Path.GetRelativePath(_fileProvider.Root, file.PhysicalPath).Split(file.Name)[0];
@@ -136,7 +147,22 @@ namespace ZoomFileManager.Services
             var c = Task.WhenAll(uploadTasks);
             try
             {
-                await c;
+                var items = await c;
+                if (_serviceOptions.NotificationWebhook.Any())
+                {
+                    if (items.All(x => x.UploadSucceeded))
+                    {
+                        
+                        var folderRef = await _odru.GetParentItemAsync(items.Last().ItemResponse, ct);
+                        string uploadFolderUrl = folderRef.WebUrl ?? string.Empty;
+                        string? message =
+                            $"Successfully uploaded recording: {webhookEvent.Payload.Object.Topic}. You can view them using this url: {uploadFolderUrl}";
+                        foreach (string notificationEndpoint in _serviceOptions.NotificationWebhook)
+                        {
+                            await SendWebhookNotification(notificationEndpoint, message);
+                        }
+                    }
+                }
             }
             catch (Exception e)
             {
@@ -244,8 +270,9 @@ namespace ZoomFileManager.Services
                         {
                             iterations++;
 
+                            int iterations1 = iterations;
                             string? testPath = _extensionRegex.Replace(fullPath,
-                                match => $"({iterations.ToString()})" + match.Value);
+                                match => $"({iterations1.ToString()})" + match.Value);
                             try
                             {
                                 if (!_fileProvider.GetFileInfo(testPath).Exists)
@@ -317,6 +344,15 @@ namespace ZoomFileManager.Services
             }
         }
 
+        async Task SendWebhookNotification(string endpoint, string message)
+        {
+            var jsonMessage = $"{{\"text\": \"{message}\"}}";
+            using var client = _httpClientFactory.CreateClient();
+            var responseMessage= await client.PostAsync(endpoint, new StringContent(jsonMessage, Encoding.UTF8, "application/json"));
+            if (!responseMessage.IsSuccessStatusCode)
+               _logger.LogError($"Unsuccessful in activating notification provider at endpoint: {endpoint} \n for message: \n {message}");
+            
+        }
         internal async Task<Stream> GetDownloadAsStreamAsync(HttpRequestMessage httpRequest)
         {
             using var client = _httpClientFactory.CreateClient();

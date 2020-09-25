@@ -8,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using ZoomFileManager.Services;
 using ZoomFileManager.Controllers;
 using System;
+using ZoomFileManager.BackgroundServices;
 using ZoomFileManager.Helpers;
 
 namespace ZoomFileManager
@@ -24,29 +25,35 @@ namespace ZoomFileManager
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            // services.AddHangfire(configuration => configuration.UseSimpleAssemblyNameTypeSerializer()
-            //     .UseRecommendedSerializerSettings().UseSQLiteStorage().UseSerilogLogProvider());
-            // services.AddHangfireServer(o =>
-            // {
-            //     o.WorkerCount = 4;
-            // });
+            var appConfigOptions = Configuration.GetSection("AppConfig");
             services.AddHttpClient();
-
-            var fileProvider = new PhysicalFileProvider(Path.GetTempPath());
-
-            services.AddSingleton(fileProvider);
-            services.AddAuthentication(o => { o.DefaultScheme = SchemesNamesConst.TokenAuthenticationDefaultScheme; })
-                .AddScheme<TokenAuthenticationOptions, TokenAuthenticationHandler>(
-                    SchemesNamesConst.TokenAuthenticationDefaultScheme, o => { });
-            services.AddScoped<OneDriveOperationsService>();
-            services.AddTransient<RecordingManagementService>();
-            services.AddTransient<Odru>();
+            services.Configure<RecordingManagementServiceOptions>(x =>
+            {
+                try
+                {
+                    x.NotificationWebhook = appConfigOptions.GetSection("notificationEndpoints").Get<string[]>();
+                }
+                catch (Exception)
+                {
+                    //ignore
+                }
+            });
             services.Configure((Action<WebhookRecieverOptions>) (o =>
             {
                 o.AllowedTokens = Configuration.GetSection("AppConfig").GetSection("allowedTokens").Get<string[]>();
             }));
-
+           
             services.Configure<OdruOptions>(x => Configuration.GetSection("AppConfig").Bind("OdruOptions", x));
+            var fileProvider = new PhysicalFileProvider(Path.GetTempPath());
+            services.AddSingleton<ProcessingChannel>();
+            services.AddSingleton(fileProvider);
+            services.AddAuthentication(o => { o.DefaultScheme = SchemesNamesConst.TokenAuthenticationDefaultScheme; })
+                .AddScheme<TokenAuthenticationOptions, TokenAuthenticationHandler>(
+                    SchemesNamesConst.TokenAuthenticationDefaultScheme, o => { });
+            services.AddTransient<OneDriveOperationsService>();
+            services.AddTransient<RecordingManagementService>();
+            services.AddTransient<Odru>();
+      
             services.AddControllers();
         }
 

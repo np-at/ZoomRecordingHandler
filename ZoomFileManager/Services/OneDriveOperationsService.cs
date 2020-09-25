@@ -80,9 +80,18 @@ namespace ZoomFileManager.Services
             _gs = new GraphServiceClient(DoAuth(options.Value));
         }
 
-        public async Task PutFileAsync(IFileInfo fileInfo, string? relativePath)
+        public async Task<UploadResult<DriveItem>> PutFileAsync(IFileInfo fileInfo, string? relativePath)
         {
-            await UploadTask(_userName, fileInfo, relativePath);
+            
+            return await UploadTask(_userName, fileInfo, relativePath);
+            
+        }
+
+        public async Task<DriveItem> GetParentItemAsync(DriveItem driveItem, CancellationToken ct)
+        {
+            if (_gs == null)
+                throw new NullReferenceException(nameof(_gs));
+            return await _gs.Drive.Items[driveItem.ParentReference.Id].Request().GetAsync(ct);
         }
 
         #region RefCode
@@ -297,7 +306,7 @@ namespace ZoomFileManager.Services
             return collection;
         }
 
-        private async Task UploadTask(string user, IFileInfo filePath, string? relativePath)
+        private async Task<UploadResult<DriveItem>> UploadTask(string user, IFileInfo filePath, string? relativePath)
         {
             if (_gs == null)
                 throw new NullReferenceException(nameof(_gs));
@@ -378,6 +387,7 @@ namespace ZoomFileManager.Services
                 {
                     // Upload the file
                     var uploadResult = await fileUploadTask.UploadAsync(progress);
+                    
 
                     _logger.LogInformation(uploadResult.UploadSucceeded
                         ? $"Upload complete, item ID: {uploadResult.ItemResponse.Id}"
@@ -389,7 +399,7 @@ namespace ZoomFileManager.Services
                     //     return 0;
                     // else
                     //     throw new CryptographicException("Hashes do not match");
-                    return;
+                    return uploadResult;
                 }
                 catch (ServiceException ex)
                 {
