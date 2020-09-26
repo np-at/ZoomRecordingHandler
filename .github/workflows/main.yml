@@ -36,5 +36,16 @@ jobs:
           docker login docker.pkg.github.com -u ${{ secrets.githubuser }} -p ${{ secrets.token }}
           docker push docker.pkg.github.com/cforat/accstory/zoomfilemanager:latest
           
-      
+      - name: Container image scan
+        uses: Azure/container-scan@v0
+        with:
+          # Docker image to scan
+          image-name: zoomfilemanager
+          # Minimum severities of vulnerabilities to be displayed (UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL)
+          severity-threshold: MEDIUM # optional, default is HIGH
+          # Username to authenticate to the Docker registry
+          # Github token
+          # token: # default is ${{ github.token }}
+          # Add additional checks to ensure the image is secure and follows best practices and CIS standards
+          run-quality-checks: true # optional, default is true
       
