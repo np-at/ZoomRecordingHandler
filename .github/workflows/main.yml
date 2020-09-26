@@ -34,15 +34,16 @@ jobs:
           docker build --file './ZoomFileManager/Dockerfile' --build-arg BUILD_ENV="prod" -t '${{ secrets.registry }}/zoomfilemanager:latest' -t docker.pkg.github.com/cforat/accstory/zoomfilemanager:latest ./
           docker push '${{ secrets.registry }}/zoomfilemanager:latest'
           docker login docker.pkg.github.com -u ${{ secrets.githubuser }} -p ${{ secrets.token }}
-          docker push docker.pkg.github.com/cforat/accstory/zoomfilemanager:latest
+          docker push docker.pkg.github.com/np-at/zoomrecordinghandler/zoomfilemanager:latest
           
       - name: Container image scan
         uses: Azure/container-scan@v0
         with:
           # Docker image to scan
-          image-name: zoomfilemanager
+          image-name: docker.pkg.github.com/np-at/zoomrecordinghandler/zoomfilemanager:latest
           # Minimum severities of vulnerabilities to be displayed (UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL)
           severity-threshold: MEDIUM # optional, default is HIGH
+          username: np-at
           # Username to authenticate to the Docker registry
           # Github token
           # token: # default is ${{ github.token }}
