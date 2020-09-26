@@ -31,7 +31,6 @@ jobs:
       - run: |
           docker build --file './ZoomFileManager/Dockerfile' --build-arg BUILD_ENV="prod" -t '${{ secrets.registry }}/zoomfilemanager:latest' -t docker.pkg.github.com/np-at/zoomrecordinghandler/zoomfilemanager:latest ./
           docker push '${{ secrets.registry }}/zoomfilemanager:latest'
-          echo "${{ secrets.token }}" | docker login docker.pkg.github.com -u "np-at"
 
       - name: docker login
         uses: docker/login-action@v1.4.0
