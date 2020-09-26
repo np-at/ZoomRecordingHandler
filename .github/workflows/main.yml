@@ -7,8 +7,6 @@ name: CI
 on:
   push:
     branches: [ master ]
-  pull_request:
-    branches: [ master ]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -31,9 +29,9 @@ jobs:
           password: ${{ secrets.password }}
 
       - run: |
-          docker build --file './ZoomFileManager/Dockerfile' --build-arg BUILD_ENV="prod" -t '${{ secrets.registry }}/zoomfilemanager:latest' -t docker.pkg.github.com/cforat/accstory/zoomfilemanager:latest ./
+          docker build --file './ZoomFileManager/Dockerfile' --build-arg BUILD_ENV="prod" -t '${{ secrets.registry }}/zoomfilemanager:latest' -t docker.pkg.github.com/np-at/zoomrecordinghandler/zoomfilemanager:latest ./
           docker push '${{ secrets.registry }}/zoomfilemanager:latest'
-          docker login docker.pkg.github.com -u ${{ secrets.githubuser }} -p ${{ secrets.token }}
+          echo "${{ secrets.token }} | docker login docker.pkg.github.com -u "np-at"
           docker push docker.pkg.github.com/np-at/zoomrecordinghandler/zoomfilemanager:latest
           
       - name: Container image scan
