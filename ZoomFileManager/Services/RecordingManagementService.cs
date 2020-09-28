@@ -27,6 +27,9 @@ namespace ZoomFileManager.Services
     {
         public string[] Endpoints { get; set; } = Array.Empty<string>();
         public string? ReferralUrlBase { get; set; }
+        
+        public string[]? AllowedHostEmails { get; set; }
+
     }
 
     public class RecordingManagementService : IDisposable
@@ -121,8 +124,17 @@ namespace ZoomFileManager.Services
             return _invalidFileNameChars.Replace(sb.ToString(), string.Empty).Replace(" ", "_");
         }
 
+        private bool IsHostEmailAllowed(string hostEmail)
+        {
+            return _serviceOptions.AllowedHostEmails?.Contains(hostEmail, StringComparer.InvariantCultureIgnoreCase) ?? false;
+        }
         internal async Task DownloadFilesFromWebookAsync(ZoomWebhookEvent webhookEvent, CancellationToken ct = default)
         {
+            // if AllowedHostEmails is defined and the current zoom event doesn't have its hostEmail in that list, abort
+            if (_serviceOptions.AllowedHostEmails != null && !_serviceOptions.AllowedHostEmails.Any() &&
+                !IsHostEmailAllowed(webhookEvent.Payload.Object.HostEmail))
+                return;
+            
             var requests = GenerateZoomApiRequestsFromWebhook(webhookEvent, ExampleNameTransformationFunc,
                 ExampleFolderNameTransformationFunc);
             List<Task<IFileInfo>> tasks = new List<Task<IFileInfo>>();

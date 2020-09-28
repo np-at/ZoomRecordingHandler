@@ -35,6 +35,7 @@ namespace ZoomFileManager.Services
         public string? UserName { get; set; }
 
         public string? RootDirectory { get; set; }
+        
     }
 
 
