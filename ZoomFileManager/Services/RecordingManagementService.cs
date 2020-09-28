@@ -16,6 +16,7 @@ using NodaTime;
 using NodaTime.Extensions;
 using NodaTime.TimeZones;
 using Serilog;
+using ZoomFileManager.Helpers;
 using ZoomFileManager.Models;
 using Directory = System.IO.Directory;
 using File = System.IO.File;
@@ -36,16 +37,18 @@ namespace ZoomFileManager.Services
         private readonly Regex _invalidFileNameChars = new Regex("[\\\\/:\"*?<>|'`]+");
         private readonly ILogger<RecordingManagementService> _logger;
         private readonly OneDriveOperationsService _oneDriveOperationsService;
+        private readonly SlackApiHelpers _slackApiHelpers;
         private readonly RecordingManagementServiceOptions _serviceOptions;
 
         public RecordingManagementService(ILogger<RecordingManagementService> logger,
-            IHttpClientFactory httpClientFactory, PhysicalFileProvider fileProvider, OneDriveOperationsService oneDriveOperationsService,
+            IHttpClientFactory httpClientFactory, PhysicalFileProvider fileProvider, OneDriveOperationsService oneDriveOperationsService, SlackApiHelpers slackApiHelpers,
             IOptions<RecordingManagementServiceOptions>? serviceOptions)
         {
             _logger = logger;
             _httpClientFactory = httpClientFactory;
             _fileProvider = fileProvider;
             _oneDriveOperationsService = oneDriveOperationsService;
+            _slackApiHelpers = slackApiHelpers;
             _serviceOptions = serviceOptions?.Value ?? new RecordingManagementServiceOptions();
         }
 
@@ -152,8 +155,11 @@ namespace ZoomFileManager.Services
                     if (items.All(x => x.UploadSucceeded))
                     {
                         string itemResponseWebUrl = items.Last().ItemResponse.WebUrl;
+                        string? userId = string.IsNullOrWhiteSpace(webhookEvent.Payload.Object.HostEmail)
+                            ? string.Empty
+                            : await _slackApiHelpers.GetUserIdAsync(webhookEvent.Payload.Object.HostEmail);
                         string? message =
-                            $"{( string.IsNullOrWhiteSpace(webhookEvent.Payload.Object.HostId) ? string.Empty : "<@"+webhookEvent.Payload.Object.HostId +'>')}Successfully uploaded recording: {webhookEvent.Payload.Object.Topic}. You can view them using this url: <{_serviceOptions.ReferralUrlBase + itemResponseWebUrl.Remove(itemResponseWebUrl.LastIndexOf('/'))}| onedrive folder link>";
+                            $"{( string.IsNullOrWhiteSpace(webhookEvent.Payload.Object.HostEmail) ? string.Empty : "<@"+userId+'>')}Successfully uploaded recording: {webhookEvent.Payload.Object.Topic}. You can view them using this url: <{_serviceOptions.ReferralUrlBase + itemResponseWebUrl.Remove(itemResponseWebUrl.LastIndexOf('/'))}| onedrive folder link>";
                         foreach (string notificationEndpoint in _serviceOptions.Endpoints)
                             await SendWebhookNotification(notificationEndpoint, message);
                     }

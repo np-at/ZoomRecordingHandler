@@ -42,7 +42,7 @@ namespace ZoomFileManager
             {
                 o.AllowedTokens = Configuration.GetSection("AppConfig").GetSection("allowedTokens").Get<string[]>();
             }));
-
+            services.Configure<SlackApiOptions>(x => appConfigOptions.Bind("SlackApiOptions", x));
             services.Configure<OdruOptions>(x => appConfigOptions.Bind("OdruOptions", x));
             var fileProvider = new PhysicalFileProvider(Path.GetTempPath());
             services.AddSingleton<ProcessingChannel>();
@@ -54,6 +54,7 @@ namespace ZoomFileManager
             services.AddTransient<OneDriveOperationsService>();
             services.AddTransient<RecordingManagementService>();
             services.AddTransient<OneDriveOperationsService>();
+            services.AddTransient<SlackApiHelpers>();
 
             services.AddControllers();
         }
