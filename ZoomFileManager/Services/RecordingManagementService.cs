@@ -153,7 +153,7 @@ namespace ZoomFileManager.Services
                     {
                         string itemResponseWebUrl = items.Last().ItemResponse.WebUrl;
                         string? message =
-                            $"{( string.IsNullOrWhiteSpace(webhookEvent.Payload.Object.HostId) ? string.Empty : "<@"+webhookEvent.Payload.Object.HostId +'>')}Successfully uploaded recording: {webhookEvent.Payload.Object.Topic}. You can view them using this url: {_serviceOptions.ReferralUrlBase + itemResponseWebUrl.Remove(itemResponseWebUrl.LastIndexOf('/'))}";
+                            $"{( string.IsNullOrWhiteSpace(webhookEvent.Payload.Object.HostId) ? string.Empty : "<@"+webhookEvent.Payload.Object.HostId +'>')}Successfully uploaded recording: {webhookEvent.Payload.Object.Topic}. You can view them using this url: <{_serviceOptions.ReferralUrlBase + itemResponseWebUrl.Remove(itemResponseWebUrl.LastIndexOf('/'))}| onedrive folder link>";
                         foreach (string notificationEndpoint in _serviceOptions.Endpoints)
                             await SendWebhookNotification(notificationEndpoint, message);
                     }
