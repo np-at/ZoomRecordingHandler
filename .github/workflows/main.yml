@@ -7,8 +7,6 @@ name: CI
 on:
   push:
     branches: [ master ]
-  pull_request:
-    branches: [ master ]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -22,7 +20,12 @@ jobs:
 
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-         
+        
+      - name: DevSkim
+        uses: microsoft/DevSkim-Action@v1
+      - uses: github/codeql-action/upload-sarif@v1
+        with:
+          sarif_file: devskim-results.sarif
           
       - uses: azure/docker-login@v1
         with:
@@ -31,7 +34,30 @@ jobs:
           password: ${{ secrets.password }}
 
       - run: |
-          docker build --file './ZoomFileManager/Dockerfile' --build-arg BUILD_ENV="prod" -t '${{ secrets.registry }}/zoomfilemanager:latest' ./
+          docker build --file './ZoomFileManager/Dockerfile' --build-arg BUILD_ENV="prod" -t '${{ secrets.registry }}/zoomfilemanager:latest' -t docker.pkg.github.com/np-at/zoomrecordinghandler/zoomfilemanager:latest ./
           docker push '${{ secrets.registry }}/zoomfilemanager:latest'
-      
+
+      - name: docker login
+        uses: docker/login-action@v1.4.0
+        with:
+          registry: docker.pkg.github.com
+          username: np-at
+          password: ${{ github.token }}
+         
+      - name: push to docker packages
+        run: docker push docker.pkg.github.com/np-at/zoomrecordinghandler/zoomfilemanager:latest
+          
+      - name: Container image scan
+        uses: Azure/container-scan@v0
+        with:
+          # Docker image to scan
+          image-name: docker.pkg.github.com/np-at/zoomrecordinghandler/zoomfilemanager:latest
+          # Minimum severities of vulnerabilities to be displayed (UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL)
+          severity-threshold: MEDIUM # optional, default is HIGH
+          username: np-at
+          # Username to authenticate to the Docker registry
+          # Github token
+          # token: # default is ${{ github.token }}
+          # Add additional checks to ensure the image is secure and follows best practices and CIS standards
+          run-quality-checks: true # optional, default is true
       
