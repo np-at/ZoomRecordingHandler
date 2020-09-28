@@ -38,7 +38,7 @@ namespace ZoomFileManager
                     //ignore
                 }
             });
-            services.Configure((Action<WebhookRecieverOptions>) (o =>
+            services.Configure((Action<WebhookReceiversOptions>) (o =>
             {
                 o.AllowedTokens = Configuration.GetSection("AppConfig").GetSection("allowedTokens").Get<string[]>();
             }));
@@ -46,6 +46,7 @@ namespace ZoomFileManager
             services.Configure<OdruOptions>(x => appConfigOptions.Bind("OdruOptions", x));
             var fileProvider = new PhysicalFileProvider(Path.GetTempPath());
             services.AddSingleton<ProcessingChannel>();
+            services.AddHostedService<ZoomEventProcessingService>();
             services.AddSingleton(fileProvider);
             services.AddAuthentication(o => { o.DefaultScheme = SchemesNamesConst.TokenAuthenticationDefaultScheme; })
                 .AddScheme<TokenAuthenticationOptions, TokenAuthenticationHandler>(

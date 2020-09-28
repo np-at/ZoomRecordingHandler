@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/dotnet/core/aspnet:3.1-alpine AS base
 WORKDIR /app
-EXPOSE 80
+EXPOSE 8080
 FROM mcr.microsoft.com/dotnet/core/sdk:3.1-buster AS build
 WORKDIR /src
 COPY ["ZoomFileManager/ZoomFileManager.csproj", "ZoomFileManager/"]
@@ -19,4 +19,7 @@ ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=publish /app/publish .
 RUN if [ "${BUILD_ENV}" = "prod" ]; then ln -f -s /run/secrets/zoomFileManager_settings appsettings.json; fi
+RUN adduser -D hostinguser
+RUN chown -R hostinguser /app
+USER hostinguser
 ENTRYPOINT ["dotnet", "ZoomFileManager.dll"]

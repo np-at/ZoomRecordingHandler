@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ZoomFileManager.BackgroundServices;
@@ -21,9 +20,9 @@ namespace ZoomFileManager.Controllers
     public class WebhookReceiver : ControllerBase
     {
         private readonly ILogger<WebhookReceiver> _logger;
-        private readonly IOptions<WebhookRecieverOptions> _options;
+        private readonly IOptions<WebhookReceiversOptions> _options;
         private readonly ProcessingChannel _processingChannel;
-        public WebhookReceiver(ILogger<WebhookReceiver> logger, IOptions<WebhookRecieverOptions> options, ProcessingChannel processingChannel)
+        public WebhookReceiver(ILogger<WebhookReceiver> logger, IOptions<WebhookReceiversOptions> options, ProcessingChannel processingChannel)
         {
             _logger = logger;
             _options = options;
@@ -34,7 +33,7 @@ namespace ZoomFileManager.Controllers
         {
             context.Request.EnableBuffering();
    
-            var tempPath = Path.Join(Path.GetTempPath(), "asdf");
+            string? tempPath = Path.Join(Path.GetTempPath(), "asdf");
              
              try
              {
@@ -69,29 +68,28 @@ namespace ZoomFileManager.Controllers
         [HttpPost("v2")]
         public async Task<IActionResult> ReceiveNotificationV2([FromBody] ZoomWebhookEvent webhookEvent, CancellationToken cancellationToken)
         {
-            var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(TimeSpan.FromSeconds(3));
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    var eventAdded = await _processingChannel.AddFileAsync(webhookEvent.DownloadToken, cts.Token);
-                    if (eventAdded)
-                    {
-                        return new OkResult();
-                    }
-                }
-                catch (OperationCanceledException) when (cts.IsCancellationRequested)
-                {
-                  // ignore
-                }
-            }
+            await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
+            // var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            // cts.CancelAfter(TimeSpan.FromSeconds(3));
+            // if (ModelState.IsValid)
+            // {
+            //     try
+            //     {
+            //         var eventAdded = await _processingChannel.AddFileAsync(webhookEvent.DownloadToken, cts.Token);
+            //         if (eventAdded)
+            //         {
+            //             return new OkResult();
+            //         }
+            //     }
+            //     catch (OperationCanceledException) when (cts.IsCancellationRequested)
+            //     {
+            //       // ignore
+            //     }
+            // }
             return new BadRequestResult();
         }
         [HttpPost]
-        public IActionResult ReceiveNotification([FromBody] ZoomWebhookEvent webhookEvent, [FromServices]
-            IServiceScopeFactory
-                serviceScopeFactory, [FromHeader(Name = "Authorization")] string? authKey)
+        public async Task<IActionResult> ReceiveNotification([FromBody] ZoomWebhookEvent webhookEvent, [FromHeader(Name = "Authorization")] string? authKey, CancellationToken cancellationToken)
         {
             // if (!ModelState.IsValid || webhookEvent.Event == null || !webhookEvent.Event.Any())
             //     HandleApiFallback(HttpContext);
@@ -103,24 +101,14 @@ namespace ZoomFileManager.Controllers
             {
                 try
                 {
-                    _ = Task.Run(async () =>
+                    if (await _processingChannel.AddZoomEventAsync(webhookEvent, cancellationToken))
                     {
-                        try
-                        {
-
-                            using var scope = serviceScopeFactory.CreateScope();
-                            using var recService = scope.ServiceProvider.GetRequiredService<RecordingManagementService>();
-                            await recService.DownloadFilesFromWebookAsync(webhookEvent).ConfigureAwait(false);
-                        }
-                        catch (Exception e)
-                        {
-                            Console.WriteLine(e);
-                            throw;
-                            
-                        }
-                    });
-
-                    return NoContent();
+                        return new NoContentResult();
+                    }
+                    else
+                    {
+                        return new StatusCodeResult(503); 
+                    }
                 }
                 catch (NullReferenceException ex)
                 {
@@ -134,7 +122,7 @@ namespace ZoomFileManager.Controllers
         }
     }
 
-    public class WebhookRecieverOptions
+    public class WebhookReceiversOptions
     {
         public string[] AllowedTokens { get; set; } = Array.Empty<string>();
     }

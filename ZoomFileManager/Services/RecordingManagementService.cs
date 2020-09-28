@@ -325,6 +325,7 @@ namespace ZoomFileManager.Services
                     catch (IOException e)
                     {
                         _logger.LogError("IO ERROR", e);
+                        throw;
                     }
                     catch (Exception ex)
                     {

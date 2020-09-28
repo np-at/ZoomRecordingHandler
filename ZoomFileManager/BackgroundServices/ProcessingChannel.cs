@@ -13,7 +13,6 @@ namespace ZoomFileManager.BackgroundServices
     public class ProcessingChannel
     {
         private readonly ILogger<ProcessingChannel> _logger;
-        private const int MaxMessagesInChannel = 100;
         private readonly Channel<string> _channel;
         private readonly Channel<ZoomWebhookEvent> _eventChannel;
         
@@ -47,6 +46,11 @@ namespace ZoomFileManager.BackgroundServices
 
             return false;
         }
+
+        public ValueTask<bool> WaitToReadZoomEventAsync(CancellationToken ct = default) =>
+            _eventChannel.Reader.WaitToReadAsync(ct);
+        public ValueTask<ZoomWebhookEvent> ReadZoomEventAsync(CancellationToken ct = default) =>
+            _eventChannel.Reader.ReadAsync(ct);
 
         public IAsyncEnumerable<ZoomWebhookEvent> ReadAllZoomEventsAsync(CancellationToken ct = default) =>
             _eventChannel.Reader.ReadAllAsync(ct);

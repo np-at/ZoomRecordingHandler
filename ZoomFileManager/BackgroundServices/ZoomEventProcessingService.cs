@@ -14,7 +14,8 @@ namespace ZoomFileManager.BackgroundServices
         private readonly ProcessingChannel _processingChannel;
         private readonly IServiceProvider _serviceProvider;
 
-        public ZoomEventProcessingService(ILogger<ZoomEventProcessingService> logger, ProcessingChannel processingChannel, IServiceProvider serviceProvider)
+        public ZoomEventProcessingService(ILogger<ZoomEventProcessingService> logger,
+            ProcessingChannel processingChannel, IServiceProvider serviceProvider)
         {
             _logger = logger;
             _processingChannel = processingChannel;
@@ -23,25 +24,35 @@ namespace ZoomFileManager.BackgroundServices
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            await foreach( var fileName in _processingChannel.ReadAllZoomEventsAsync(stoppingToken))
+            try
             {
-                using var scope = _serviceProvider.CreateScope();
-                var processor = scope.ServiceProvider.GetRequiredService<RecordingManagementService>();
-                try
+                while (!stoppingToken.IsCancellationRequested)
                 {
-                    await processor.DownloadFilesFromWebookAsync(fileName, stoppingToken);
+                    using var scope = _serviceProvider.CreateScope();
+                    var processor = scope.ServiceProvider.GetRequiredService<RecordingManagementService>();
+
+                    var webhookEvent = await _processingChannel.ReadZoomEventAsync(stoppingToken);
+                    await processor.DownloadFilesFromWebookAsync(webhookEvent, stoppingToken);
+                    
                 }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    throw;
-                }
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Operation Cancelled exception occured");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(ex, "An exception occured");
+                _processingChannel.TryCompleteWriter(ex);
+            }
+            finally
+            {
+                _processingChannel.TryCompleteWriter();
             }
         }
 
         internal static class EventIds
         {
-            
         }
     }
 }
