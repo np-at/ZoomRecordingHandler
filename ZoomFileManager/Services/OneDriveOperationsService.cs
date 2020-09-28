@@ -27,33 +27,7 @@ namespace ZoomFileManager.Services
         Task DeleteFileAsync();
     }
 
-    public class OneDriveOperationsService : IOneDriveOperationsService
-    {
-        private readonly ILogger<OneDriveOperationsService> _logger;
-
-
-        public OneDriveOperationsService(ILogger<OneDriveOperationsService> logger)
-        {
-            _logger = logger;
-        }
-
-        public Task DeleteFileAsync()
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task GetFilesAsync()
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task PutFileAsync()
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    public class OdruOptions
+   public class OdruOptions
     {
         public string? ClientId { get; set; }
         public string? ClientSecret { get; set; }
@@ -61,76 +35,6 @@ namespace ZoomFileManager.Services
         public string? UserName { get; set; }
 
         public string? RootDirectory { get; set; }
-    }
-
-    public partial class Odru
-    {
-        private readonly ILogger<Odru> _logger;
-        private readonly IOptions<OdruOptions> _options;
-        private readonly string? _rootUploadPath;
-        private readonly string _userName;
-        private GraphServiceClient? _gs;
-
-        public Odru(ILogger<Odru> logger, IOptions<OdruOptions> options)
-        {
-            this._logger = logger;
-            _rootUploadPath = options.Value.RootDirectory;
-            _userName = options.Value.UserName ?? throw new Exception();
-            this._options = options;
-            _gs = new GraphServiceClient(DoAuth(options.Value));
-           
-        }
-
-        public async Task<UploadResult<DriveItem>> PutFileAsync(IFileInfo fileInfo, string? relativePath)
-        {
-            
-            return await UploadTask(_userName, fileInfo, relativePath);
-            
-        }
-
-        public async Task<DriveItem> GetParentItemAsync(DriveItem driveItem, CancellationToken ct)
-        {
-            if (_gs == null)
-                throw new NullReferenceException(nameof(_gs));
-            return await _gs.Drive.Items[driveItem.ParentReference.Id].Request().GetAsync(ct);
-        }
-
-        #region RefCode
-
-        // private static async Task<string> WaitForRemoteHash(string remoteFileId, int maxWaitIntervals = 10)
-        // {
-        //     string? remoteHash = null;
-        //     int i = 0;
-        //     while (string.IsNullOrWhiteSpace(remoteHash))
-        //     {
-        //         if (i > maxWaitIntervals)
-        //             throw new TimeoutException();
-        //         Console.WriteLine("Waiting 5 seconds for remote hash to be computed");
-        //         Task.Delay(5000).Wait();
-        //         
-        //         var remoteItem = await _gs.Users[_user.Id].Drive.Items[remoteFileId].Request().GetAsync();
-        //         remoteHash = remoteItem.File.Hashes.Sha1Hash;
-        //         i++;
-        //         
-        //     }
-        //
-        //     return remoteHash ?? "";
-        // }
-
-        // static GraphServiceClient GetGraphServiceClient(string token)
-        // {
-        //     return new GraphServiceClient(
-        //         new DelegateAuthenticationProvider(
-        //             (requestMessage) =>
-        //             {
-        //                 requestMessage.Headers.Authorization =
-        //                     new AuthenticationHeaderValue("Bearer", token);
-        //
-        //                 return Task.FromResult(0);
-        //             }));
-        // }
-
-        #endregion
     }
 
 
@@ -142,7 +46,7 @@ namespace ZoomFileManager.Services
         }
     }
 
-    public partial class Odru
+    public class OneDriveOperationsService
     {
         private const int RecurseLevel = 1;
 
@@ -460,5 +364,72 @@ namespace ZoomFileManager.Services
             var authProvider = new ClientCredentialProvider(confidentialClientApplication);
             return authProvider;
         }
+
+        private readonly ILogger<OneDriveOperationsService> _logger;
+        private readonly IOptions<OdruOptions> _options;
+        private readonly string? _rootUploadPath;
+        private readonly string _userName;
+        private GraphServiceClient? _gs;
+
+        public OneDriveOperationsService(ILogger<OneDriveOperationsService> logger, IOptions<OdruOptions> options)
+        {
+            this._logger = logger;
+            _rootUploadPath = options.Value.RootDirectory;
+            _userName = options.Value.UserName ?? throw new Exception();
+            this._options = options;
+            _gs = new GraphServiceClient(DoAuth(options.Value));
+           
+        }
+
+        public async Task<UploadResult<DriveItem>> PutFileAsync(IFileInfo fileInfo, string? relativePath)
+        {
+            
+            return await UploadTask(_userName, fileInfo, relativePath);
+            
+        }
+
+        public async Task<DriveItem> GetParentItemAsync(DriveItem driveItem, CancellationToken ct)
+        {
+            if (_gs == null)
+                throw new NullReferenceException(nameof(_gs));
+            return await _gs.Drive.Items[driveItem.ParentReference.Id].Request().GetAsync(ct);
+        }
+
+        #region RefCode
+
+        // private static async Task<string> WaitForRemoteHash(string remoteFileId, int maxWaitIntervals = 10)
+        // {
+        //     string? remoteHash = null;
+        //     int i = 0;
+        //     while (string.IsNullOrWhiteSpace(remoteHash))
+        //     {
+        //         if (i > maxWaitIntervals)
+        //             throw new TimeoutException();
+        //         Console.WriteLine("Waiting 5 seconds for remote hash to be computed");
+        //         Task.Delay(5000).Wait();
+        //         
+        //         var remoteItem = await _gs.Users[_user.Id].Drive.Items[remoteFileId].Request().GetAsync();
+        //         remoteHash = remoteItem.File.Hashes.Sha1Hash;
+        //         i++;
+        //         
+        //     }
+        //
+        //     return remoteHash ?? "";
+        // }
+
+        // static GraphServiceClient GetGraphServiceClient(string token)
+        // {
+        //     return new GraphServiceClient(
+        //         new DelegateAuthenticationProvider(
+        //             (requestMessage) =>
+        //             {
+        //                 requestMessage.Headers.Authorization =
+        //                     new AuthenticationHeaderValue("Bearer", token);
+        //
+        //                 return Task.FromResult(0);
+        //             }));
+        // }
+
+        #endregion
     }
 }

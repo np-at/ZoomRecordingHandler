@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
-using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,6 +27,7 @@ namespace ZoomFileManager.Services
         public string[] Endpoints { get; set; } = Array.Empty<string>();
         public string? ReferralUrlBase { get; set; }
     }
+
     public class RecordingManagementService : IDisposable
     {
         private readonly Regex _extensionRegex = new Regex("\\.[^.]+$");
@@ -35,16 +35,17 @@ namespace ZoomFileManager.Services
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly Regex _invalidFileNameChars = new Regex("[\\\\/:\"*?<>|'`]+");
         private readonly ILogger<RecordingManagementService> _logger;
-        private readonly Odru _odru;
+        private readonly OneDriveOperationsService _oneDriveOperationsService;
         private readonly RecordingManagementServiceOptions _serviceOptions;
 
         public RecordingManagementService(ILogger<RecordingManagementService> logger,
-            IHttpClientFactory httpClientFactory, PhysicalFileProvider fileProvider, Odru odru, IOptions<RecordingManagementServiceOptions>? serviceOptions)
+            IHttpClientFactory httpClientFactory, PhysicalFileProvider fileProvider, OneDriveOperationsService oneDriveOperationsService,
+            IOptions<RecordingManagementServiceOptions>? serviceOptions)
         {
             _logger = logger;
             _httpClientFactory = httpClientFactory;
             _fileProvider = fileProvider;
-            _odru = odru;
+            _oneDriveOperationsService = oneDriveOperationsService;
             _serviceOptions = serviceOptions?.Value ?? new RecordingManagementServiceOptions();
         }
 
@@ -98,7 +99,8 @@ namespace ZoomFileManager.Services
                 usingTimeZone = DateTimeZoneProviders.Tzdb["America/Los_Angeles"];
             }
 
-            var offset = usingTimeZone.GetUtcOffset(webhookEvent.Payload?.Object?.StartTime.ToInstant() ?? new Instant());
+            var offset =
+                usingTimeZone.GetUtcOffset(webhookEvent.Payload?.Object?.StartTime.ToInstant() ?? new Instant());
             var offsetSpan = offset.ToTimeSpan();
             string st =
                 $"{webhookEvent?.Payload?.Object?.StartTime.UtcDateTime.Add(offsetSpan).ToString("yy_MM_dd-HHmm-", CultureInfo.InvariantCulture)}{webhookEvent?.Payload?.Object?.Topic ?? "Recording"}-{webhookEvent?.Payload?.Object?.HostEmail ?? webhookEvent?.Payload?.AccountId ?? string.Empty}";
@@ -138,31 +140,23 @@ namespace ZoomFileManager.Services
                 throw;
             }
 
-            List<Task<UploadResult<DriveItem>>> uploadTasks = new List<Task<UploadResult<DriveItem>>>();
-            foreach (var file in processedFiles)
-            {
-                string relPath = Path.GetRelativePath(_fileProvider.Root, file.PhysicalPath).Split(file.Name)[0];
-                uploadTasks.Add(_odru.PutFileAsync(file, relPath));
-            }
+            List<Task<UploadResult<DriveItem>>> uploadTasks = (from file in processedFiles
+                let relPath = Path.GetRelativePath(_fileProvider.Root, file.PhysicalPath).Split(file.Name)[0]
+                select _oneDriveOperationsService.PutFileAsync(file, relPath)).ToList();
 
             var c = Task.WhenAll(uploadTasks);
             try
             {
                 var items = await c;
                 if (_serviceOptions.Endpoints.Any())
-                {
                     if (items.All(x => x.UploadSucceeded))
                     {
-                        
                         string itemResponseWebUrl = items.Last().ItemResponse.WebUrl;
                         string? message =
-                            $"Successfully uploaded recording: {webhookEvent.Payload.Object.Topic}. You can view them using this url: {_serviceOptions.ReferralUrlBase + itemResponseWebUrl.Remove(itemResponseWebUrl.LastIndexOf('/'))}";
+                            $"{( string.IsNullOrWhiteSpace(webhookEvent.Payload.AccountId) ? string.Empty : "<@"+webhookEvent.Payload.AccountId +'>')}Successfully uploaded recording: {webhookEvent.Payload.Object.Topic}. You can view them using this url: {_serviceOptions.ReferralUrlBase + itemResponseWebUrl.Remove(itemResponseWebUrl.LastIndexOf('/'))}";
                         foreach (string notificationEndpoint in _serviceOptions.Endpoints)
-                        {
                             await SendWebhookNotification(notificationEndpoint, message);
-                        }
                     }
-                }
             }
             catch (Exception e)
             {
@@ -227,6 +221,7 @@ namespace ZoomFileManager.Services
             string? relativePath,
             bool force = false, bool failOnExists = false)
         {
+            if (httpRequest == null) throw new ArgumentNullException(nameof(httpRequest));
             if (fileName == null)
                 throw new ArgumentNullException(nameof(fileName));
             try
@@ -235,7 +230,7 @@ namespace ZoomFileManager.Services
                 {
                     string? fullPath = Path.Join(relativePath, fileName);
                     IFileInfo fileInfo;
-                  
+
 
                     try
                     {
@@ -246,6 +241,7 @@ namespace ZoomFileManager.Services
                         _logger.LogError("Error creating directory", e);
                         throw;
                     }
+
                     try
                     {
                         fileInfo = _fileProvider.GetFileInfo(fullPath);
@@ -255,6 +251,7 @@ namespace ZoomFileManager.Services
                         _logger.LogError("error while getting file info", e);
                         throw;
                     }
+
                     if (fileInfo.Exists)
                     {
                         if (failOnExists)
@@ -329,7 +326,7 @@ namespace ZoomFileManager.Services
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError($"misc error encountered while creating file",ex);
+                        _logger.LogError("misc error encountered while creating file", ex);
                         throw;
                     }
 
@@ -345,15 +342,17 @@ namespace ZoomFileManager.Services
             }
         }
 
-        async Task SendWebhookNotification(string endpoint, string message)
+        private async Task SendWebhookNotification(string endpoint, string message)
         {
-            var jsonMessage = $"{{\"text\": \"{message}\"}}";
+            string? jsonMessage = $"{{\"text\": \"{message}\"}}";
             using var client = _httpClientFactory.CreateClient();
-            var responseMessage= await client.PostAsync(endpoint, new StringContent(jsonMessage, Encoding.UTF8, "application/json"));
+            var responseMessage = await client.PostAsync(endpoint,
+                new StringContent(jsonMessage, Encoding.UTF8, "application/json"));
             if (!responseMessage.IsSuccessStatusCode)
-               _logger.LogError($"Unsuccessful in activating notification provider at endpoint: {endpoint} \n for message: \n {message}");
-            
+                _logger.LogError(
+                    $"Unsuccessful in activating notification provider at endpoint: {endpoint} \n for message: \n {message}");
         }
+
         internal async Task<Stream> GetDownloadAsStreamAsync(HttpRequestMessage httpRequest)
         {
             using var client = _httpClientFactory.CreateClient();

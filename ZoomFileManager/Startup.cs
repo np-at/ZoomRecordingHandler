@@ -53,7 +53,7 @@ namespace ZoomFileManager
                     SchemesNamesConst.TokenAuthenticationDefaultScheme, o => { });
             services.AddTransient<OneDriveOperationsService>();
             services.AddTransient<RecordingManagementService>();
-            services.AddTransient<Odru>();
+            services.AddTransient<OneDriveOperationsService>();
 
             services.AddControllers();
         }
