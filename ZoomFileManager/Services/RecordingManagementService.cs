@@ -131,7 +131,7 @@ namespace ZoomFileManager.Services
         internal async Task DownloadFilesFromWebookAsync(ZoomWebhookEvent webhookEvent, CancellationToken ct = default)
         {
             // if AllowedHostEmails is defined and the current zoom event doesn't have its hostEmail in that list, abort
-            if (_serviceOptions.AllowedHostEmails != null && !_serviceOptions.AllowedHostEmails.Any() &&
+            if (_serviceOptions.AllowedHostEmails != null && _serviceOptions.AllowedHostEmails.Any() &&
                 !IsHostEmailAllowed(webhookEvent.Payload.Object.HostEmail))
                 return;
             
