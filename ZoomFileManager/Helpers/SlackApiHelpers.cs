@@ -14,8 +14,8 @@ namespace ZoomFileManager.Helpers
     }
     public class SlackApiOptions
     {
-        public string BotUserToken { get; set; }
-        public string Channel { get; set; }
+        public string? BotUserToken { get; set; }
+        public string? Channel { get; set; }
         
     }
     public class SlackApiHelpers

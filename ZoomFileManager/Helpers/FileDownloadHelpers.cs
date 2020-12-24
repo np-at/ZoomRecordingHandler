@@ -32,7 +32,7 @@ namespace ZoomFileManager.Helpers
             }
         }
  
-        private void ProcessQueuedItems(object ignored)
+        private void ProcessQueuedItems(object? ignored)
         {
             while (true)
             {

@@ -27,24 +27,24 @@ namespace ZoomFileManager.Services
     {
         public string[] Endpoints { get; set; } = Array.Empty<string>();
         public string? ReferralUrlBase { get; set; }
-        
-        public string[]? AllowedHostEmails { get; set; }
 
+        public string[]? AllowedHostEmails { get; set; }
     }
 
     public class RecordingManagementService : IDisposable
     {
-        private readonly Regex _extensionRegex = new Regex("\\.[^.]+$");
+        private readonly Regex _extensionRegex = new("\\.[^.]+$");
         private readonly PhysicalFileProvider _fileProvider;
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly Regex _invalidFileNameChars = new Regex("[\\\\/:\"*?<>|'`]+");
+        private readonly Regex _invalidFileNameChars = new("[\\\\/:\"*?<>|'`]+");
         private readonly ILogger<RecordingManagementService> _logger;
         private readonly OneDriveOperationsService _oneDriveOperationsService;
-        private readonly SlackApiHelpers _slackApiHelpers;
         private readonly RecordingManagementServiceOptions _serviceOptions;
+        private readonly SlackApiHelpers _slackApiHelpers;
 
         public RecordingManagementService(ILogger<RecordingManagementService> logger,
-            IHttpClientFactory httpClientFactory, PhysicalFileProvider fileProvider, OneDriveOperationsService oneDriveOperationsService, SlackApiHelpers slackApiHelpers,
+            IHttpClientFactory httpClientFactory, PhysicalFileProvider fileProvider,
+            OneDriveOperationsService oneDriveOperationsService, SlackApiHelpers slackApiHelpers,
             IOptions<RecordingManagementServiceOptions>? serviceOptions)
         {
             _logger = logger;
@@ -126,18 +126,20 @@ namespace ZoomFileManager.Services
 
         private bool IsHostEmailAllowed(string hostEmail)
         {
-            return _serviceOptions.AllowedHostEmails?.Contains(hostEmail, StringComparer.InvariantCultureIgnoreCase) ?? false;
+            return _serviceOptions.AllowedHostEmails?.Contains(hostEmail, StringComparer.InvariantCultureIgnoreCase) ??
+                   false;
         }
+
         internal async Task DownloadFilesFromWebookAsync(ZoomWebhookEvent webhookEvent, CancellationToken ct = default)
         {
             // if AllowedHostEmails is defined and the current zoom event doesn't have its hostEmail in that list, abort
             if (_serviceOptions.AllowedHostEmails != null && _serviceOptions.AllowedHostEmails.Any() &&
                 !IsHostEmailAllowed(webhookEvent.Payload.Object.HostEmail))
                 return;
-            
+
             var requests = GenerateZoomApiRequestsFromWebhook(webhookEvent, ExampleNameTransformationFunc,
                 ExampleFolderNameTransformationFunc);
-            List<Task<IFileInfo>> tasks = new List<Task<IFileInfo>>();
+            List<Task<IFileInfo>> tasks = new();
 
             foreach ((var requestMessage, var fileName, string? folderName) in requests)
                 tasks.Add(DownloadFileAsync(requestMessage, fileName, folderName));
@@ -171,7 +173,7 @@ namespace ZoomFileManager.Services
                             ? string.Empty
                             : await _slackApiHelpers.GetUserIdAsync(webhookEvent.Payload.Object.HostEmail);
                         string? message =
-                            $"{( string.IsNullOrWhiteSpace(webhookEvent.Payload.Object.HostEmail) ? string.Empty : "<@"+userId+'>')}Successfully uploaded recording: {webhookEvent.Payload.Object.Topic}. You can view them using this url: <{_serviceOptions.ReferralUrlBase + itemResponseWebUrl.Remove(itemResponseWebUrl.LastIndexOf('/'))}| onedrive folder link>";
+                            $"{(string.IsNullOrWhiteSpace(webhookEvent.Payload.Object.HostEmail) ? string.Empty : "<@" + userId + '>')}Successfully uploaded recording: {webhookEvent.Payload.Object.Topic}. You can view them using this url: <{_serviceOptions.ReferralUrlBase + itemResponseWebUrl.Remove(itemResponseWebUrl.LastIndexOf('/'))}| onedrive folder link>";
                         foreach (string notificationEndpoint in _serviceOptions.Endpoints)
                             await SendWebhookNotification(notificationEndpoint, message);
                     }
@@ -183,7 +185,7 @@ namespace ZoomFileManager.Services
             }
             finally
             {
-                List<Exception> exceptions = new List<Exception>();
+                List<Exception> exceptions = new();
                 foreach (var file in processedFiles)
                     try
                     {
@@ -244,20 +246,67 @@ namespace ZoomFileManager.Services
                 throw new ArgumentNullException(nameof(fileName));
             try
             {
-                for (int i = 0; i < 5; i++)
+                string? fullPath = Path.Join(relativePath, fileName);
+                IFileInfo fileInfo;
+
+
+                try
                 {
-                    string? fullPath = Path.Join(relativePath, fileName);
-                    IFileInfo fileInfo;
+                    Directory.CreateDirectory(Path.Join(_fileProvider.Root, relativePath));
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError("Error creating directory", e);
+                    throw;
+                }
 
+                try
+                {
+                    fileInfo = _fileProvider.GetFileInfo(fullPath);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError("error while getting file info", e);
+                    throw;
+                }
 
-                    try
+                if (fileInfo.Exists)
+                {
+                    if (failOnExists)
                     {
-                        Directory.CreateDirectory(Path.Join(_fileProvider.Root, relativePath));
+                        _logger.LogError("File already exists.  Set 'failOnExists' = false to avoid this behavior");
+                        // httpRequest.Dispose();
+                        throw new IOException();
                     }
-                    catch (Exception e)
+
+                    int iterations = 0;
+                    bool fileLocked = !force || await IsFileLocked(fullPath);
+                    while (fileLocked && iterations < 100)
                     {
-                        _logger.LogError("Error creating directory", e);
-                        throw;
+                        iterations++;
+
+                        int iterations1 = iterations;
+                        string? testPath = _extensionRegex.Replace(fullPath,
+                            match => $"({iterations1.ToString()})" + match.Value);
+                        try
+                        {
+                            if (!_fileProvider.GetFileInfo(testPath).Exists)
+                            {
+                                fullPath = testPath;
+                                break;
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e);
+                            throw;
+                        }
+
+                        if (!force) continue;
+                        fileLocked = await IsFileLocked(testPath);
+                        if (fileLocked) continue;
+                        fullPath = testPath;
+                        break;
                     }
 
                     try
@@ -266,90 +315,41 @@ namespace ZoomFileManager.Services
                     }
                     catch (Exception e)
                     {
-                        _logger.LogError("error while getting file info", e);
+                        _logger.LogError("error checking file?", e);
                         throw;
                     }
-
-                    if (fileInfo.Exists)
-                    {
-                        if (failOnExists)
-                        {
-                            _logger.LogError("File already exists.  Set 'failOnExists' = false to avoid this behavior");
-                            // httpRequest.Dispose();
-                            throw new IOException();
-                        }
-
-                        int iterations = 0;
-                        bool fileLocked = !force || await IsFileLocked(fullPath);
-                        while (fileLocked && iterations < 100)
-                        {
-                            iterations++;
-
-                            int iterations1 = iterations;
-                            string? testPath = _extensionRegex.Replace(fullPath,
-                                match => $"({iterations1.ToString()})" + match.Value);
-                            try
-                            {
-                                if (!_fileProvider.GetFileInfo(testPath).Exists)
-                                {
-                                    fullPath = testPath;
-                                    break;
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                Console.WriteLine(e);
-                                throw;
-                            }
-
-                            if (!force) continue;
-                            fileLocked = await IsFileLocked(testPath);
-                            if (fileLocked) continue;
-                            fullPath = testPath;
-                            break;
-                        }
-
-                        try
-                        {
-                            fileInfo = _fileProvider.GetFileInfo(fullPath);
-                        }
-                        catch (Exception e)
-                        {
-                            _logger.LogError("error checking file?", e);
-                            throw;
-                        }
-                    }
-
-                    try
-                    {
-                        await using var fs = File.Create(fileInfo.PhysicalPath);
-                        using var client = _httpClientFactory.CreateClient();
-
-                        using var response =
-                            await client?.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead);
-                        if (!response.IsSuccessStatusCode)
-                            response.EnsureSuccessStatusCode();
-                        await using var stream = await response.Content.ReadAsStreamAsync();
-                        //stream.Seek(0, SeekOrigin.Begin);
-
-                        await stream.CopyToAsync(fs);
-
-                        _logger.LogInformation($"File saved as [{fileInfo.PhysicalPath}]");
-                        return fileInfo;
-                    }
-                    catch (IOException e)
-                    {
-                        _logger.LogError("IO ERROR", e);
-                        throw;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError("misc error encountered while creating file", ex);
-                        throw;
-                    }
-
-                    await Task.Delay(1000);
                 }
+
+                try
+                {
+                    await using var fs = File.Create(fileInfo.PhysicalPath);
+                    using var client = _httpClientFactory.CreateClient();
+
+                    using var response =
+                        await client.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead);
+                    if (!response.IsSuccessStatusCode)
+                        response.EnsureSuccessStatusCode();
+                    await using var stream = await response.Content.ReadAsStreamAsync();
+                    //stream.Seek(0, SeekOrigin.Begin);
+
+                    await stream.CopyToAsync(fs);
+
+                    _logger.LogInformation($"File saved as [{fileInfo.PhysicalPath}]");
+                    return fileInfo;
+                }
+                catch (IOException e)
+                {
+                    _logger.LogError("IO ERROR", e);
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("misc error encountered while creating file", ex);
+                    throw;
+                }
+
+                // await Task.Delay(1000);
+
 
                 throw new IOException("Failed ot create file after 5 attempts");
             }
