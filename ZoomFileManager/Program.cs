@@ -11,6 +11,8 @@ namespace ZoomFileManager
     {
         public static void Main(string[] args)
         {
+            Console.WriteLine("TESTING");
+            Log.Warning("Starting up");
             Log.Logger = new LoggerConfiguration()
                 .ReadFrom.Configuration(Configuration)
                 .CreateLogger();
@@ -21,6 +23,7 @@ namespace ZoomFileManager
             }
             catch (Exception ex)
             {
+                Console.WriteLine(ex);
                 Log.Fatal(ex, "Host terminated unexpectedly");
             }
             finally

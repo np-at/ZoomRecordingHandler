@@ -7,17 +7,19 @@ COPY ["ZoomFileManager/ZoomFileManager.csproj", "ZoomFileManager/"]
 RUN dotnet restore "ZoomFileManager/ZoomFileManager.csproj"
 COPY . .
 WORKDIR "/src/ZoomFileManager"
-RUN dotnet build "ZoomFileManager.csproj" -c Release -r "linux-musl-x64" -o /app/build
+ARG BUILD_CONFIG=Release
+RUN dotnet build "ZoomFileManager.csproj" -c $BUILD_CONFIG -r "linux-musl-x64" -o /app/build
 
 FROM build AS publish
-RUN dotnet publish "ZoomFileManager.csproj" -c Release -r "linux-musl-x64" -o /app/publish
+ARG BUILD_CONFIG=Release
+RUN dotnet publish "ZoomFileManager.csproj" -c $BUILD_CONFIG -r "linux-musl-x64" -o /app/publish
 
 FROM base AS final
-ARG BUILD_ENV=prod
 ENV NODE_ENV=production
 
 WORKDIR /app
 COPY --from=publish /app/publish .
+ARG BUILD_ENV=prod
 RUN if [ "${BUILD_ENV}" = "prod" ]; then ln -f -s /run/secrets/zoomFileManager_settings appsettings.json; fi
 RUN adduser -D hostinguser
 RUN chown -R hostinguser /app
