@@ -72,6 +72,7 @@ namespace ZoomFileManager
                 app.UseSerilogRequestLogging();
             }
 
+            app.UseHealthChecks("/healthcheck");
             app.UseRouting();
             app.UseAuthorization();
             app.UseAuthentication();
