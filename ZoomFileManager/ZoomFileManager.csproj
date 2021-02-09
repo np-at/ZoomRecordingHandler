@@ -41,10 +41,10 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Abstractions" Version="2.2.0" />
-    <PackageReference Include="Microsoft.Graph" Version="3.21.0" />
+    <PackageReference Include="Microsoft.Graph" Version="3.23.0" />
     <PackageReference Include="Microsoft.Graph.Auth" Version="1.0.0-preview.6" />
-    <PackageReference Include="Microsoft.Identity.Client" Version="4.24.0" />
-    <PackageReference Include="NodaTime" Version="3.0.3" />
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.25.0" />
+    <PackageReference Include="NodaTime" Version="3.0.5" />
     <PackageReference Include="Serilog" Version="2.10.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="3.4.0" />
     <PackageReference Include="Serilog.Exceptions" Version="6.0.0" />

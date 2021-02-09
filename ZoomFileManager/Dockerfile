@@ -1,7 +1,7 @@
 FROM mcr.microsoft.com/dotnet/aspnet:5.0-alpine AS base
 WORKDIR /app
 EXPOSE 8080
-FROM mcr.microsoft.com/dotnet/sdk:5.0.100-buster-slim-amd64 AS build
+FROM mcr.microsoft.com/dotnet/sdk:5.0-alpine AS build
 WORKDIR /src
 COPY ["ZoomFileManager/ZoomFileManager.csproj", "ZoomFileManager/"]
 RUN dotnet restore "ZoomFileManager/ZoomFileManager.csproj"
