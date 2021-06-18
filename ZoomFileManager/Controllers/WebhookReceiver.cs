@@ -96,6 +96,7 @@ namespace ZoomFileManager.Controllers
             var jsonString = JsonSerializer.Serialize(webhookEvent);
             string? remoteHost = HttpContext.Request.Host.ToString();
             _logger.LogInformation($"Received Webhook from {remoteHost} {jsonString}");
+            _logger.LogWarning("Headers: {Headers}", HttpContext.Request.Headers);
 
             if (!string.IsNullOrWhiteSpace(authKey) && (_options?.Value?.AllowedTokens?.Contains(authKey) ?? false))
             {
