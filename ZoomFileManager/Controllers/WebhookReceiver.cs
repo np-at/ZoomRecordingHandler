@@ -21,8 +21,8 @@ namespace ZoomFileManager.Controllers
     {
         private readonly ILogger<WebhookReceiver> _logger;
         private readonly IOptions<WebhookReceiversOptions> _options;
-        private readonly ProcessingChannel _processingChannel;
-        public WebhookReceiver(ILogger<WebhookReceiver> logger, IOptions<WebhookReceiversOptions> options, ProcessingChannel processingChannel)
+        private readonly PChannel<ZoomWebhookEvent> _processingChannel;
+        public WebhookReceiver(ILogger<WebhookReceiver> logger, IOptions<WebhookReceiversOptions> options, PChannel<ZoomWebhookEvent> processingChannel)
         {
             _logger = logger;
             _options = options;
@@ -100,7 +100,7 @@ namespace ZoomFileManager.Controllers
             {
                 try
                 {
-                    if (await _processingChannel.AddZoomEventAsync(webhookEvent, cancellationToken))
+                    if (await _processingChannel.AddEventAsync(webhookEvent, cancellationToken))
                     {
                         return new NoContentResult();
                     }

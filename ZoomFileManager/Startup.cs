@@ -50,6 +50,7 @@ namespace ZoomFileManager
             services.Configure<OdruOptions>(x => appConfigOptions.Bind("OdruOptions", x));
             var fileProvider = new PhysicalFileProvider(Path.GetTempPath());
             services.AddSingleton<PChannel<ZoomWebhookEvent>>();
+            // services.AddSingleton<ProcessingChannel>();
             services.AddHostedService<ZoomEventProcessingService>();
             services.AddSingleton(fileProvider);
             services.AddAuthentication(o => { o.DefaultScheme = SchemesNamesConst.TokenAuthenticationDefaultScheme; })
