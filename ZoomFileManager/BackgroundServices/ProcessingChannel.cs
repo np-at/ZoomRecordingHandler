@@ -10,6 +10,40 @@ using ILogger = Serilog.ILogger;
 
 namespace ZoomFileManager.BackgroundServices
 {
+    public class PChannel<T>
+    {
+        private readonly ILogger<PChannel<T>> _logger;
+        private readonly Channel<T> _eventChannel;
+
+        public PChannel(ILogger<PChannel<T>> logger)
+        {
+            _logger = logger;
+            var options = new UnboundedChannelOptions()
+            {
+                
+                SingleReader = true,
+                SingleWriter = true,
+                AllowSynchronousContinuations = false
+            };
+            _eventChannel = Channel.CreateUnbounded<T>(options);
+        }
+        public async Task<bool> AddEventAsync(T channelEvent, CancellationToken ct = default)
+        {
+            while (await _eventChannel.Writer.WaitToWriteAsync(ct) && !ct.IsCancellationRequested)
+            {
+                if (_eventChannel.Writer.TryWrite(channelEvent))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+        public ValueTask<bool> WaitToReadChannelEventAsync(CancellationToken ct = default) =>
+            _eventChannel.Reader.WaitToReadAsync(ct);
+        public ValueTask<T> ReadChannelEventAsync(CancellationToken ct = default) => _eventChannel.Reader.ReadAsync(ct);
+        public bool TryCompleteWriter(Exception? ex = null) => _eventChannel.Writer.TryComplete(ex);
+ 
+    }
     public class ProcessingChannel
     {
         private readonly ILogger<ProcessingChannel> _logger;

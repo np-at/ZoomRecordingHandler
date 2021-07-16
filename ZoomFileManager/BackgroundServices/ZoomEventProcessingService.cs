@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ZoomFileManager.Models;
 using ZoomFileManager.Services;
 
 namespace ZoomFileManager.BackgroundServices
@@ -11,11 +12,11 @@ namespace ZoomFileManager.BackgroundServices
     public class ZoomEventProcessingService : BackgroundService
     {
         private readonly ILogger<ZoomEventProcessingService> _logger;
-        private readonly ProcessingChannel _processingChannel;
+        private readonly PChannel<ZoomWebhookEvent> _processingChannel;
         private readonly IServiceProvider _serviceProvider;
 
         public ZoomEventProcessingService(ILogger<ZoomEventProcessingService> logger,
-            ProcessingChannel processingChannel, IServiceProvider serviceProvider)
+            PChannel<ZoomWebhookEvent> processingChannel, IServiceProvider serviceProvider)
         {
             _logger = logger;
             _processingChannel = processingChannel;
@@ -31,9 +32,19 @@ namespace ZoomFileManager.BackgroundServices
                     using var scope = _serviceProvider.CreateScope();
                     var processor = scope.ServiceProvider.GetRequiredService<RecordingManagementService>();
 
-                    var webhookEvent = await _processingChannel.ReadZoomEventAsync(stoppingToken);
-                    await processor.DownloadFilesFromWebookAsync(webhookEvent, stoppingToken);
-                    
+                    var webhookEvent = await _processingChannel.ReadChannelEventAsync(stoppingToken);
+                    try
+                    {
+
+                        await processor.DownloadFilesFromWebhookAsync(webhookEvent, stoppingToken);
+
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"Error: {e}");
+                        await _processingChannel.AddEventAsync(webhookEvent, stoppingToken);
+                        throw;
+                    }
                 }
             }
             catch (OperationCanceledException)

@@ -10,6 +10,7 @@ using Serilog;
 using ZoomFileManager.BackgroundServices;
 using ZoomFileManager.Controllers;
 using ZoomFileManager.Helpers;
+using ZoomFileManager.Models;
 using ZoomFileManager.Services;
 
 namespace ZoomFileManager
@@ -48,7 +49,7 @@ namespace ZoomFileManager
             services.Configure<SlackApiOptions>(x => appConfigOptions.Bind("SlackApiOptions", x));
             services.Configure<OdruOptions>(x => appConfigOptions.Bind("OdruOptions", x));
             var fileProvider = new PhysicalFileProvider(Path.GetTempPath());
-            services.AddSingleton<ProcessingChannel>();
+            services.AddSingleton<PChannel<ZoomWebhookEvent>>();
             services.AddHostedService<ZoomEventProcessingService>();
             services.AddSingleton(fileProvider);
             services.AddAuthentication(o => { o.DefaultScheme = SchemesNamesConst.TokenAuthenticationDefaultScheme; })

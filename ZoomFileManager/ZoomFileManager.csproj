@@ -34,6 +34,7 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <RuntimeIdentifiers>linux-musl-x64;win-x64</RuntimeIdentifiers>
+    <DebugType>full</DebugType>
  
   </PropertyGroup>
   <ItemGroup Condition=" '$(Configuration)' == 'Debug' ">

@@ -11,7 +11,8 @@ namespace ZoomFileManager
     {
         public static void Main(string[] args)
         {
-            Console.WriteLine("TESTING");
+            if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.Equals("Development", StringComparison.InvariantCultureIgnoreCase) ?? false)
+                Console.WriteLine("Development mode active");
             Log.Warning("Starting up");
             Log.Logger = new LoggerConfiguration()
                 .ReadFrom.Configuration(Configuration)

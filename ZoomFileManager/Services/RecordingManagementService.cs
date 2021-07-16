@@ -58,6 +58,7 @@ namespace ZoomFileManager.Services
 
         public void Dispose()
         {
+            GC.SuppressFinalize(this);
             _fileProvider.Dispose();
         }
 
@@ -89,7 +90,7 @@ namespace ZoomFileManager.Services
                 requests.Add((req, fileNameTransformationFunc(item), folderNameTransformationFunc(webhookEvent)));
             }
 
-            return requests.ToArray();
+            return requests;
         }
 
         private string ExampleFolderNameTransformationFunc(ZoomWebhookEvent webhookEvent)
@@ -119,7 +120,7 @@ namespace ZoomFileManager.Services
             sb.Append(recordingFile?.Id ?? recordingFile?.FileType ?? string.Empty);
             sb.Append(
                 recordingFile?.RecordingStart.ToLocalTime().ToString("T", CultureInfo.InvariantCulture) ?? "_");
-            sb.Append("." + recordingFile?.FileType);
+            sb.Append($".{recordingFile?.FileType}");
 
             return _invalidFileNameChars.Replace(sb.ToString(), string.Empty).Replace(" ", "_");
         }
@@ -130,12 +131,16 @@ namespace ZoomFileManager.Services
                    false;
         }
 
-        internal async Task DownloadFilesFromWebookAsync(ZoomWebhookEvent webhookEvent, CancellationToken ct = default)
+        internal async Task DownloadFilesFromWebhookAsync(ZoomWebhookEvent webhookEvent, CancellationToken ct = default)
         {
             // if AllowedHostEmails is defined and the current zoom event doesn't have its hostEmail in that list, abort
             if (_serviceOptions.AllowedHostEmails != null && _serviceOptions.AllowedHostEmails.Any() &&
                 !IsHostEmailAllowed(webhookEvent.Payload.Object.HostEmail))
+            {
+                _logger.LogDebug("Received ZoomWebhookEvent with invalid hostEmail address of {EmailAddress}, aborting", webhookEvent.Payload.Object.HostEmail);
                 return;
+            }
+                
 
             var requests = GenerateZoomApiRequestsFromWebhook(webhookEvent, ExampleNameTransformationFunc,
                 ExampleFolderNameTransformationFunc);
@@ -180,7 +185,7 @@ namespace ZoomFileManager.Services
             }
             catch (Exception e)
             {
-                _logger.LogError("Error processing uploads", e);
+                _logger.LogError("Error processing uploads: {Error}", e);
                 throw;
             }
             finally
@@ -197,7 +202,7 @@ namespace ZoomFileManager.Services
                     }
 
                 if (exceptions.Any())
-                    _logger.LogError("error deleting files", exceptions);
+                    _logger.LogError("error deleting files: {Error}", exceptions);
             }
         }
 
@@ -219,7 +224,7 @@ namespace ZoomFileManager.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError("failure", ex);
+                _logger.LogError("failure: {Error}", ex);
                 throw;
             }
 
@@ -256,7 +261,7 @@ namespace ZoomFileManager.Services
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError("Error creating directory", e);
+                    _logger.LogError("Error creating directory: {Error}", e);
                     throw;
                 }
 
@@ -266,7 +271,7 @@ namespace ZoomFileManager.Services
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError("error while getting file info", e);
+                    _logger.LogError("error while getting file info: {Error}", e);
                     throw;
                 }
 
@@ -315,7 +320,7 @@ namespace ZoomFileManager.Services
                     }
                     catch (Exception e)
                     {
-                        _logger.LogError("error checking file?", e);
+                        _logger.LogError("error checking file?: {Error}", e);
                         throw;
                     }
                 }
@@ -334,24 +339,24 @@ namespace ZoomFileManager.Services
 
                     await stream.CopyToAsync(fs);
 
-                    _logger.LogInformation($"File saved as [{fileInfo.PhysicalPath}]");
+                    _logger.LogInformation("File saved as [{PhysicalPath}]", fileInfo.PhysicalPath);
                     return fileInfo;
                 }
                 catch (IOException e)
                 {
-                    _logger.LogError("IO ERROR", e);
+                    _logger.LogError("IO ERROR: {E}", e.Message);
                     throw;
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError("misc error encountered while creating file", ex);
+                    _logger.LogError("misc error encountered while creating file: {Exception}", ex);
                     throw;
                 }
 
                 // await Task.Delay(1000);
 
 
-                throw new IOException("Failed ot create file after 5 attempts");
+                throw new IOException("Failed to create file after 5 attempts");
             }
             catch (Exception e)
             {
@@ -368,7 +373,7 @@ namespace ZoomFileManager.Services
                 new StringContent(jsonMessage, Encoding.UTF8, "application/json"));
             if (!responseMessage.IsSuccessStatusCode)
                 _logger.LogError(
-                    $"Unsuccessful in activating notification provider at endpoint: {endpoint} \n for message: \n {message}");
+                    "Unsuccessful in activating notification provider at endpoint: {Endpoint} \n for message: \n {Message}", endpoint, message);
         }
 
         internal async Task<Stream> GetDownloadAsStreamAsync(HttpRequestMessage httpRequest)
@@ -380,7 +385,7 @@ namespace ZoomFileManager.Services
 
             if (response.IsSuccessStatusCode) return await response.Content.ReadAsStreamAsync();
 
-            _logger.LogError("Error in download file request", response);
+            _logger.LogError("Error in download file request: {Response}", response);
             throw new HttpRequestException(
                 $"Error in download file request, received ${response.StatusCode} in response to ${response.RequestMessage}");
         }

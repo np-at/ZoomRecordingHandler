@@ -49,11 +49,11 @@ namespace ZoomFileManager.Controllers
                  byte[] result = new byte[buff.Length];
                  buff.Position = 0;
                  using var rdr = new StreamReader(buff);
-                 var sti = await rdr.ReadToEndAsync();
-                 var str = Encoding.UTF8.GetString(result);
+                 string? sti = await rdr.ReadToEndAsync();
+                 string? str = Encoding.UTF8.GetString(result);
                  await wrt.WriteAsync(str);
                  Console.WriteLine(sti);
-                 _logger.LogWarning($"request contents dumped to {tempPath}");
+                 _logger.LogWarning("request contents dumped to {TempPath}", tempPath);
                  // _logger.LogWarning($"{(await System.IO.File.OpenText(tempPath).ReadToEndAsync())}");
              }
              catch (Exception e)
@@ -93,11 +93,9 @@ namespace ZoomFileManager.Controllers
         {
             // if (!ModelState.IsValid || webhookEvent.Event == null || !webhookEvent.Event.Any())
             //     HandleApiFallback(HttpContext);
-            var jsonString = JsonSerializer.Serialize(webhookEvent);
+            string? jsonString = JsonSerializer.Serialize(webhookEvent);
             string? remoteHost = HttpContext.Request.Host.ToString();
-            _logger.LogInformation($"Received Webhook from {remoteHost} {jsonString}");
-            _logger.LogWarning("Headers: {Headers}", HttpContext.Request.Headers);
-
+            _logger.LogInformation("Received Webhook from {RemoteHost} {JsonString}", remoteHost, jsonString);
             if (!string.IsNullOrWhiteSpace(authKey) && (_options?.Value?.AllowedTokens?.Contains(authKey) ?? false))
             {
                 try
@@ -106,19 +104,16 @@ namespace ZoomFileManager.Controllers
                     {
                         return new NoContentResult();
                     }
-                    else
-                    {
-                        return new StatusCodeResult(503); 
-                    }
+                    return new StatusCodeResult(503);
                 }
                 catch (NullReferenceException ex)
                 {
-                    _logger.LogDebug("null ref", ex);
+                    _logger.LogDebug("null ref: {Error}", ex.Message);
                     return new UnprocessableEntityResult();
                 }
             }
 
-            _logger.LogWarning($"invalid auth token received from ${remoteHost}");
+            _logger.LogWarning("invalid auth token received {RemoteHost}", remoteHost);
             return new ForbidResult();
         }
     }

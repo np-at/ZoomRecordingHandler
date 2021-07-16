@@ -1,4 +1,5 @@
 FROM mcr.microsoft.com/dotnet/aspnet:5.0-alpine AS base
+RUN apk --no-cache add curl
 WORKDIR /app
 EXPOSE 8080
 FROM mcr.microsoft.com/dotnet/sdk:5.0-alpine AS build
@@ -24,5 +25,5 @@ RUN if [ "${BUILD_ENV}" = "prod" ]; then ln -f -s /run/secrets/zoomFileManager_s
 RUN adduser -D hostinguser
 RUN chown -R hostinguser /app
 USER hostinguser
-HEALTHCHECK CMD curl --fail http://localhost:8080/healthcheck || exit
+HEALTHCHECK CMD curl --fail http://localhost:8080/healthcheck || exit 1
 ENTRYPOINT ["dotnet", "ZoomFileManager.dll"]
