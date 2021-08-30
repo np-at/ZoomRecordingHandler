@@ -53,127 +53,32 @@ namespace ZoomFileManager.Services
     {
         private const int RecurseLevel = 1;
 
-        internal async Task<User> GetUserAsync(string userName)
+        
+        public OneDriveOperationsService(ILogger<OneDriveOperationsService> logger, IOptions<OdruOptions> options)
         {
-            var userList = new List<User>();
-
-            if (_gs == null)
-                throw new Exception();
-            var response = await _gs.Users
-                .Request()
-                .Filter($"userPrincipalName eq '{userName}'")
-                .GetAsync();
-            var pageIterator = PageIterator<User>
-                .CreatePageIterator(_gs, response, u =>
-                {
-                    // Console.WriteLine(u.UserPrincipalName);
-                    userList.Add(u);
-                    return true;
-                });
-            await pageIterator.IterateAsync();
-            if (userList.Count == 1)
-                return userList.First();
-            if (!userList.Any())
+            this._logger = logger;
+            _rootUploadPath = options.Value.RootDirectory;
+            int s = 2 * Convert.ToByte(!IsNullOrWhiteSpace(options.Value.UserName)) +
+                    3 * Convert.ToByte(!IsNullOrWhiteSpace(options.Value.SiteName)) +
+                    4 * Convert.ToByte(!IsNullOrWhiteSpace(options.Value.DriveId));
+            _targetType = s switch
             {
-                _logger.LogWarning($"Unable to find target matching {userName}");
-                throw new ArgumentException();
-            }
-
-            while (true)
+                2 => TargetType.User,
+                3 => TargetType.Site,
+                4 => TargetType.Drive,
+                _ => throw new ArgumentException("Must provide exactly one of UserName or SiteName or DriveId")
+            };
+            _targetName = _targetType switch
             {
-                Console.WriteLine("Found multiple possible entries, please select");
-                foreach (var user in userList)
-                    Console.WriteLine($"{userList.IndexOf(user).ToString()}. {user.UserPrincipalName}");
-
-                string? selection = Console.ReadLine();
-                if (!int.TryParse(selection, out int selectionIndex)) continue;
-                if (userList[selectionIndex] != null)
-                    return userList[selectionIndex];
-            }
+                TargetType.Drive => options.Value.DriveId,
+                TargetType.Site => options.Value.SiteName,
+                TargetType.User => options.Value.UserName,
+                _ => throw new ArgumentOutOfRangeException()
+            } ?? throw new InvalidOperationException();
+            this._options = options;
+            _gs = new GraphServiceClient(DoAuth(options.Value));
         }
 
-        private async Task<List<DriveItem>> EnumerateFilesAsync(string target, string? rootDir,
-            CancellationToken cancellationToken)
-        {
-            if (target == null) throw new ArgumentNullException(nameof(target));
-            if (_gs == null)
-                throw new NullReferenceException();
-
-            IDriveItemChildrenCollectionRequest drive;
-            var collection = new List<DriveItem>();
-
-            try
-            {
-                drive = _targetType switch
-                {
-                    TargetType.Drive => _gs.Drives[target].Root.ItemWithPath(rootDir).Children.Request(),
-                    TargetType.Site => _gs.Sites[target].Drive.Root.ItemWithPath(rootDir).Children
-                        .Request(),
-                    TargetType.User => _gs.Users[target].Drive.Root.ItemWithPath(rootDir).Children
-                        .Request(),
-                    _ => throw new ArgumentOutOfRangeException()
-                };
-              
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
-
-            IDriveItemChildrenCollectionPage? page;
-            try
-            {
-                page = await drive.GetAsync(cancellationToken);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
-
-            var startingItems = await GetDriveItemsFromPageAsync(page, cancellationToken);
-            if (startingItems == null)
-                throw new NullReferenceException();
-            List<DriveItem> currentLevelChildren = startingItems.ToList();
-            try
-            {
-                for (int i = 0; i < RecurseLevel; i++)
-                {
-                    var nextLevelChildren = new List<DriveItem>();
-                    foreach (var child in currentLevelChildren)
-                        try
-                        {
-                            var children = await _gs.Users[target].Drive.Items[child.Id].Children
-                                .Request().GetAsync(cancellationToken);
-                            var s = await GetDriveItemsFromPageAsync(children, cancellationToken);
-                            if (s != null)
-                                nextLevelChildren.AddRange(s);
-                        }
-                        catch (Exception e)
-                        {
-                            Console.WriteLine(e);
-                            throw;
-                        }
-
-                    // after collecting all the children of the current batch, add them to the results pile and shift collections up one level
-                    collection.AddRange(currentLevelChildren);
-
-                    // if this is the last round, items in nextLevelChildren would not have a chance to be added to results pile, so add them now
-                    if (i == RecurseLevel - 1)
-                        collection.AddRange(nextLevelChildren);
-                    else
-                        currentLevelChildren = nextLevelChildren.ToList();
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
-
-            return collection;
-        }
 
         private async Task<IList<DriveItem>?> GetDriveItemsFromPageAsync(IDriveItemChildrenCollectionPage? page,
             CancellationToken cancellationToken)
@@ -321,11 +226,12 @@ namespace ZoomFileManager.Services
                     // Upload the file
                     var uploadResult = await fileUploadTask.UploadAsync(progress);
 
-
-                    _logger.LogInformation(uploadResult.UploadSucceeded
-                        ? $"Upload complete, item ID: {uploadResult.ItemResponse.Id}"
-                        : "Upload failed");
-                    Console.WriteLine($"upload of {uploadResult.ItemResponse.Name} was successful");
+                    if (uploadResult.UploadSucceeded)
+                        _logger.LogInformation("Upload of {Name}", uploadResult.ItemResponse.Name);
+                    else
+                        _logger.LogError("Upload of item {Name} failed", uploadResult.ItemResponse.Name);
+                    
+                    // Console.WriteLine($"upload of {uploadResult.ItemResponse.Name} was successful");
                     // var rHash = await WaitForRemoteHash(uploadResult.ItemResponse.Id)
                     //     .ConfigureAwait(true);
                     // if (CompareSha1(rHash))
@@ -336,7 +242,7 @@ namespace ZoomFileManager.Services
                 }
                 catch (ServiceException ex)
                 {
-                    _logger.LogError($"Error uploading: {ex.Message}", ex);
+                    _logger.LogError("Error uploading: {Message}",ex.Message);
                     throw;
                 }
 
@@ -407,30 +313,7 @@ namespace ZoomFileManager.Services
             User
         }
 
-        public OneDriveOperationsService(ILogger<OneDriveOperationsService> logger, IOptions<OdruOptions> options)
-        {
-            this._logger = logger;
-            _rootUploadPath = options.Value.RootDirectory;
-            int s = 2 * Convert.ToByte(!IsNullOrWhiteSpace(options.Value.UserName)) +
-                    3 * Convert.ToByte(!IsNullOrWhiteSpace(options.Value.SiteName)) +
-                    4 * Convert.ToByte(!IsNullOrWhiteSpace(options.Value.DriveId));
-            _targetType = s switch
-            {
-                2 => TargetType.User,
-                3 => TargetType.Site,
-                4 => TargetType.Drive,
-                _ => throw new ArgumentException("Must provide exactly one of UserName or SiteName or DriveId")
-            };
-            _targetName = _targetType switch
-            {
-                TargetType.Drive => options.Value.DriveId,
-                TargetType.Site => options.Value.SiteName,
-                TargetType.User => options.Value.UserName,
-                _ => throw new ArgumentOutOfRangeException()
-            } ?? throw new InvalidOperationException();
-            this._options = options;
-            _gs = new GraphServiceClient(DoAuth(options.Value));
-        }
+     
 
         public async Task<UploadResult<DriveItem>> PutFileAsync(IFileInfo fileInfo, string? relativePath)
         {
@@ -443,7 +326,127 @@ namespace ZoomFileManager.Services
                 throw new NullReferenceException(nameof(_gs));
             return await _gs.Drive.Items[driveItem.ParentReference.Id].Request().GetAsync(ct);
         }
+        internal async Task<User> GetUserAsync(string userName)
+        {
+            var userList = new List<User>();
 
+            if (_gs == null)
+                throw new Exception();
+            var response = await _gs.Users
+                .Request()
+                .Filter($"userPrincipalName eq '{userName}'")
+                .GetAsync();
+            var pageIterator = PageIterator<User>
+                .CreatePageIterator(_gs, response, u =>
+                {
+                    // Console.WriteLine(u.UserPrincipalName);
+                    userList.Add(u);
+                    return true;
+                });
+            await pageIterator.IterateAsync();
+            if (userList.Count == 1)
+                return userList.First();
+            if (!userList.Any())
+            {
+                _logger.LogWarning("Unable to find target matching {UserName}", userName);
+                throw new ArgumentException();
+            }
+
+            while (true)
+            {
+                Console.WriteLine("Found multiple possible entries, please select");
+                foreach (var user in userList)
+                    Console.WriteLine($"{userList.IndexOf(user).ToString()}. {user.UserPrincipalName}");
+
+                string? selection = Console.ReadLine();
+                if (!int.TryParse(selection, out int selectionIndex)) continue;
+                if (userList[selectionIndex] != null)
+                    return userList[selectionIndex];
+            }
+        }
+
+        private async Task<List<DriveItem>> EnumerateFilesAsync(string target, string? rootDir,
+            CancellationToken cancellationToken)
+        {
+            if (target == null) throw new ArgumentNullException(nameof(target));
+            if (_gs == null)
+                throw new NullReferenceException();
+
+            IDriveItemChildrenCollectionRequest drive;
+            var collection = new List<DriveItem>();
+
+            try
+            {
+                drive = _targetType switch
+                {
+                    TargetType.Drive => _gs.Drives[target].Root.ItemWithPath(rootDir).Children.Request(),
+                    TargetType.Site => _gs.Sites[target].Drive.Root.ItemWithPath(rootDir).Children
+                        .Request(),
+                    TargetType.User => _gs.Users[target].Drive.Root.ItemWithPath(rootDir).Children
+                        .Request(),
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+              
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+
+            IDriveItemChildrenCollectionPage? page;
+            try
+            {
+                page = await drive.GetAsync(cancellationToken);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+
+            var startingItems = await GetDriveItemsFromPageAsync(page, cancellationToken);
+            if (startingItems == null)
+                throw new NullReferenceException();
+            List<DriveItem> currentLevelChildren = startingItems.ToList();
+            try
+            {
+                for (int i = 0; i < RecurseLevel; i++)
+                {
+                    var nextLevelChildren = new List<DriveItem>();
+                    foreach (var child in currentLevelChildren)
+                        try
+                        {
+                            var children = await _gs.Users[target].Drive.Items[child.Id].Children
+                                .Request().GetAsync(cancellationToken);
+                            var s = await GetDriveItemsFromPageAsync(children, cancellationToken);
+                            if (s != null)
+                                nextLevelChildren.AddRange(s);
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e);
+                            throw;
+                        }
+
+                    // after collecting all the children of the current batch, add them to the results pile and shift collections up one level
+                    collection.AddRange(currentLevelChildren);
+
+                    // if this is the last round, items in nextLevelChildren would not have a chance to be added to results pile, so add them now
+                    if (i == RecurseLevel - 1)
+                        collection.AddRange(nextLevelChildren);
+                    else
+                        currentLevelChildren = nextLevelChildren.ToList();
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+
+            return collection;
+        }
         #region RefCode
 
         // private static async Task<string> WaitForRemoteHash(string remoteFileId, int maxWaitIntervals = 10)
