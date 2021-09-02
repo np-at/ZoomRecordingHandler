@@ -21,7 +21,7 @@ ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=publish /app/publish .
 ARG BUILD_ENV=prod
-RUN if [ "${BUILD_ENV}" = "prod" ]; then ln -f -s /run/secrets/zoomFileManager_settings appsettings.json; fi
+# RUN if [ "${BUILD_ENV}" = "prod" ]; then ln -f -s /run/secrets/zoomFileManager_settings appsettings.json; fi
 RUN adduser -D hostinguser
 RUN chown -R hostinguser /app
 USER hostinguser
