@@ -47,6 +47,7 @@ namespace ZoomFileManager
                 {
                     webBuilder.UseStartup<Startup>().UseUrls(new[] { "http://0.0.0.0:8080"});
                     webBuilder.UseSerilog();
+                    webBuilder.UseConfiguration(Configuration);
                 });
     }
 }
