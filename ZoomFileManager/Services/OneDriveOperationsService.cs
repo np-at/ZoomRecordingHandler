@@ -9,38 +9,17 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
-using Microsoft.Graph.Auth;
+using Azure.Identity;
 using Microsoft.Identity.Client;
 using File = System.IO.File;
 using FileSystemInfo = System.IO.FileSystemInfo;
 using ZoomFileManager.Helpers;
 using static System.String;
 using Microsoft.Graph.Extensions;
+using ZoomFileManager.Models.ConfigurationSchemas;
 
 namespace ZoomFileManager.Services
 {
-    public interface IOneDriveOperationsService
-    {
-        Task GetFilesAsync();
-
-        Task PutFileAsync();
-
-        Task DeleteFileAsync();
-    }
-
-    public class OdruOptions
-    {
-        public string? ClientId { get; set; }
-        public string? ClientSecret { get; set; }
-        public string? TenantId { get; set; }
-        public string? UserName { get; set; }
-        public string? SiteName { get; set; }
-        public string? DriveId { get; set; }
-
-        public string? RootDirectory { get; set; }
-    }
-
-
     internal static class Extensions
     {
         public static IEnumerable<(T item, int index)> WithIndex<T>(this IEnumerable<T> self)
@@ -49,38 +28,71 @@ namespace ZoomFileManager.Services
         }
     }
 
-    public class OneDriveOperationsService
+    public class OneDriveOperationsService : IUploadService
     {
         private const int RecurseLevel = 1;
-
         
-        public OneDriveOperationsService(ILogger<OneDriveOperationsService> logger, IOptions<OdruOptions> options)
+        public OneDriveOperationsService(ILogger<OneDriveOperationsService> logger,
+            IOptions<SharepointClientConfig> options)
         {
-            this._logger = logger;
+            _logger = logger;
+            _options = options;
             _rootUploadPath = options.Value.RootDirectory;
-            int s = 2 * Convert.ToByte(!IsNullOrWhiteSpace(options.Value.UserName)) +
-                    3 * Convert.ToByte(!IsNullOrWhiteSpace(options.Value.SiteName)) +
-                    4 * Convert.ToByte(!IsNullOrWhiteSpace(options.Value.DriveId));
-            _targetType = s switch
-            {
-                2 => TargetType.User,
-                3 => TargetType.Site,
-                4 => TargetType.Drive,
-                _ => throw new ArgumentException("Must provide exactly one of UserName or SiteName or DriveId")
-            };
-            _targetName = _targetType switch
-            {
-                TargetType.Drive => options.Value.DriveId,
-                TargetType.Site => options.Value.SiteName,
-                TargetType.User => options.Value.UserName,
-                _ => throw new ArgumentOutOfRangeException()
-            } ?? throw new InvalidOperationException();
-            this._options = options;
-            _gs = new GraphServiceClient(DoAuth(options.Value));
+            _targetType = TargetType.Site;
+            _targetName = options.Value?.SiteName ?? throw new NullReferenceException("SiteName Not Provided for Sharepoint Configuration");
+
         }
 
+        public OneDriveOperationsService(ILogger<OneDriveOperationsService> logger,
+            IOptions<OD_DriveClientConfig> options)
+        {
+            _logger = logger;
+            _options = options;
+            _rootUploadPath = options.Value.RootDirectory;
+            _targetType = TargetType.Drive;
+            _targetName = options.Value?.DriveId ??
+                          throw new NullReferenceException(
+                              "Drive Id not provided for Onedrive Drive Client Configuration");
 
-        private async Task<IList<DriveItem>?> GetDriveItemsFromPageAsync(IDriveItemChildrenCollectionPage? page,
+        }
+
+        public OneDriveOperationsService(ILogger<OneDriveOperationsService> logger, IOptions<OD_UserClientConfig> options)
+        {
+            _logger = logger;
+            _options = options;
+            _rootUploadPath = options.Value.RootDirectory;
+            _targetType = TargetType.User;
+            _targetName = options.Value?.UserName ??     throw new NullReferenceException(
+                "Username not provided for Onedrive User Client Configuration");
+        }
+        // public OneDriveOperationsService(ILogger<OneDriveOperationsService> logger, IOptions<BaseOneDriveClientConfig> options)
+        // {
+        //     this._logger = logger;
+        //     _rootUploadPath = options.Value.RootDirectory;
+        //     
+        //     int s = (2 * Convert.ToByte(!IsNullOrWhiteSpace(options.Value.UserName))) +
+        //             (3 * Convert.ToByte(!IsNullOrWhiteSpace(options.Value.SiteName))) +
+        //             (4 * Convert.ToByte(!IsNullOrWhiteSpace(options.Value.DriveId)));
+        //     _targetType = s switch
+        //     {
+        //         2 => TargetType.User,
+        //         3 => TargetType.Site,
+        //         4 => TargetType.Drive,
+        //         _ => throw new ArgumentException("Must provide exactly one of UserName or SiteName or DriveId")
+        //     };
+        //     _targetName = _targetType switch
+        //     {
+        //         TargetType.Drive => options.Value.DriveId,
+        //         TargetType.Site => options.Value.SiteName,
+        //         TargetType.User => options.Value.UserName,
+        //         _ => throw new ArgumentOutOfRangeException()
+        //     } ?? throw new InvalidOperationException();
+        //     this._options = options;
+        //     _gs = new GraphServiceClient(DoAuth(options.Value));
+        // }
+
+
+        private static async Task<IList<DriveItem>?> GetDriveItemsFromPageAsync(IDriveItemChildrenCollectionPage? page,
             CancellationToken cancellationToken)
         {
             if (page == null)
@@ -91,7 +103,7 @@ namespace ZoomFileManager.Services
             {
                 try
                 {
-                    page = await page.NextPageRequest.GetAsync(cancellationToken);
+                    page = await page.NextPageRequest.GetAsync(cancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
@@ -112,21 +124,21 @@ namespace ZoomFileManager.Services
         {
             var collection = new List<DriveItem>();
 
-            var children = await GetDriveItemsFromPageAsync(driveItem.Children, cancellationToken);
+            var children = await GetDriveItemsFromPageAsync(driveItem.Children, cancellationToken).ConfigureAwait(false);
             if (children == null)
                 return null;
 
             foreach (var child in children)
             {
-                var grandchild = await GetDriveItemsFromPageAsync(child.Children, cancellationToken);
+                var grandchild = await GetDriveItemsFromPageAsync(child.Children, cancellationToken).ConfigureAwait(false);
                 if (grandchild != null) collection.AddRange(grandchild);
             }
 
             return collection;
         }
 
-        private async Task<UploadResult<DriveItem>> UploadTask(string target, IFileInfo filePath, string? relativePath,
-            TargetType targetIsSite)
+        private async Task<UploadResult<DriveItem>> UploadTask(string uploadTarget, IFileInfo filePath, string? relativePath,
+            TargetType targetType)
         {
             if (_gs == null)
                 throw new NullReferenceException(nameof(_gs));
@@ -143,7 +155,7 @@ namespace ZoomFileManager.Services
 
                 for (int i = 0; i < 5; i++)
                 {
-                    bool fileLocked = await FileHelpers.IsFileLocked(filePath);
+                    bool fileLocked = await FileHelpers.IsFileLocked(filePath).ConfigureAwait(false);
                     if (!fileLocked)
                         break;
 
@@ -152,7 +164,7 @@ namespace ZoomFileManager.Services
                     _logger.LogInformation("file {PhysicalPath} is in use, retrying in {DelaySeconds} seconds",
                         filePath.PhysicalPath, delay / 1000);
 
-                    await Task.Delay(delay);
+                    await Task.Delay(delay).ConfigureAwait(false);
                 }
 
                 await using var fileStream = filePath.CreateReadStream();
@@ -174,26 +186,29 @@ namespace ZoomFileManager.Services
 
                 // Create the upload session
                 // itemPath does not need to be a path to an existing item
-                UploadSession uploadSession = targetIsSite switch
+                UploadSession uploadSession = targetType switch
                 {
-                    TargetType.Drive => await _gs.Drives[target].Root
+                    TargetType.Drive => await _gs.Drives[uploadTarget].Root
                         .ItemWithPath(itemPath)
                         .CreateUploadSession(uploadProps)
                         .Request()
-                        .PostAsync(),
-                    TargetType.Site => await _gs.Sites[target].Drive.Root
+                        .PostAsync()
+                        .ConfigureAwait(false),
+                    TargetType.Site => await _gs.Sites[uploadTarget].Drive.Root
                         .ItemWithPath(itemPath)
                         .CreateUploadSession(uploadProps)
                         .Request()
-                        .PostAsync(),
-                    TargetType.User => await _gs.Users[target].Drive.Root
+                        .PostAsync()
+                        .ConfigureAwait(false),
+                    TargetType.User => await _gs.Users[uploadTarget].Drive.Root
                         .ItemWithPath(itemPath)
                         .CreateUploadSession(uploadProps)
                         .Request()
-                        .PostAsync(),
-                    _ => throw new ArgumentOutOfRangeException(nameof(targetIsSite), targetIsSite, null)
+                        .PostAsync()
+                        .ConfigureAwait(false),
+                    _ => throw new ArgumentOutOfRangeException(nameof(targetType), targetType, null)
                 };
-                
+
 
 
                 // Max slice size must be a multiple of 320 KiB
@@ -216,7 +231,7 @@ namespace ZoomFileManager.Services
                     }
 
                     Console.WriteLine(
-                        $"[{(100 * progress2 / fileStreamLength).ToString()} % - {spd} mb/sec]Uploaded {progress2.ToString()} bytes of {fileStreamLength.ToString()} bytes");
+                        $"[{100 * progress2 / fileStreamLength} % - {spd} mb/sec]Uploaded {progress2} bytes of {fileStreamLength} bytes");
                     stopwatch.Restart();
                     lastProgress = progress2;
                 });
@@ -224,13 +239,13 @@ namespace ZoomFileManager.Services
                 try
                 {
                     // Upload the file
-                    var uploadResult = await fileUploadTask.UploadAsync(progress);
+                    var uploadResult = await fileUploadTask.UploadAsync(progress).ConfigureAwait(false);
 
                     if (uploadResult.UploadSucceeded)
                         _logger.LogInformation("Upload of {Name}", uploadResult.ItemResponse.Name);
                     else
                         _logger.LogError("Upload of item {Name} failed", uploadResult.ItemResponse.Name);
-                    
+
                     // Console.WriteLine($"upload of {uploadResult.ItemResponse.Name} was successful");
                     // var rHash = await WaitForRemoteHash(uploadResult.ItemResponse.Id)
                     //     .ConfigureAwait(true);
@@ -242,7 +257,7 @@ namespace ZoomFileManager.Services
                 }
                 catch (ServiceException ex)
                 {
-                    _logger.LogError("Error uploading: {Message}",ex.Message);
+                    _logger.LogError("Error uploading: {Message}", ex.Message);
                     throw;
                 }
 
@@ -272,7 +287,7 @@ namespace ZoomFileManager.Services
             using var sha = SHA1.Create();
             await using var fileStream = file.CreateReadStream();
             string localHash =
-                Convert.ToBase64String(await sha.ComputeHashAsync(fileStream ?? throw new InvalidOperationException()));
+                Convert.ToBase64String(await sha.ComputeHashAsync(fileStream ?? throw new InvalidOperationException()).ConfigureAwait(false));
             //debug
             Console.WriteLine($"remote sha1 = {uploadedHash}");
             Console.WriteLine($"local sha1 = {localHash}");
@@ -282,28 +297,19 @@ namespace ZoomFileManager.Services
 
         private byte[] GetFileBytes(FileSystemInfo filePath) => File.ReadAllBytes(filePath.FullName);
 
+        
         private async Task<UploadSession> GetUploadSession(GraphServiceClient client, string item, string user)
         {
-            return await client.Users[user].Drive.Root.ItemWithPath(item).CreateUploadSession().Request().PostAsync();
+            return await client.Users[user].Drive.Root.ItemWithPath(item).CreateUploadSession().Request().PostAsync().ConfigureAwait(false);
         }
 
-        private static ClientCredentialProvider DoAuth(OdruOptions options)
-        {
-            var confidentialClientApplication = ConfidentialClientApplicationBuilder
-                .Create(options.ClientId)
-                .WithTenantId(options.TenantId)
-                .WithClientSecret(options.ClientSecret)
-                .Build();
-
-            var authProvider = new ClientCredentialProvider(confidentialClientApplication);
-            return authProvider;
-        }
+        private static ClientSecretCredential DoAuth(BaseOneDriveClientConfig options) => new(options.TenantId, options.ClientId, options.ClientSecret);
 
         private readonly ILogger<OneDriveOperationsService> _logger;
-        private readonly IOptions<OdruOptions> _options;
+        private readonly IOptions<BaseOneDriveClientConfig> _options;
         private readonly string? _rootUploadPath;
         private readonly string _targetName;
-        private GraphServiceClient? _gs;
+        private readonly GraphServiceClient? _gs;
         private readonly TargetType _targetType;
 
         private enum TargetType
@@ -313,18 +319,15 @@ namespace ZoomFileManager.Services
             User
         }
 
-     
 
-        public async Task<UploadResult<DriveItem>> PutFileAsync(IFileInfo fileInfo, string? relativePath)
-        {
-            return await UploadTask(_targetName, fileInfo, relativePath, _targetType);
-        }
+
+    
 
         public async Task<DriveItem> GetParentItemAsync(DriveItem driveItem, CancellationToken ct)
         {
             if (_gs == null)
                 throw new NullReferenceException(nameof(_gs));
-            return await _gs.Drive.Items[driveItem.ParentReference.Id].Request().GetAsync(ct);
+            return await _gs.Drive.Items[driveItem.ParentReference.Id].Request().GetAsync(ct).ConfigureAwait(false);
         }
         internal async Task<User> GetUserAsync(string userName)
         {
@@ -335,7 +338,8 @@ namespace ZoomFileManager.Services
             var response = await _gs.Users
                 .Request()
                 .Filter($"userPrincipalName eq '{userName}'")
-                .GetAsync();
+                .GetAsync()
+                .ConfigureAwait(false);
             var pageIterator = PageIterator<User>
                 .CreatePageIterator(_gs, response, u =>
                 {
@@ -343,12 +347,12 @@ namespace ZoomFileManager.Services
                     userList.Add(u);
                     return true;
                 });
-            await pageIterator.IterateAsync();
+            await pageIterator.IterateAsync().ConfigureAwait(false);
             if (userList.Count == 1)
-                return userList.First();
+                return userList[0];
             if (!userList.Any())
             {
-                _logger.LogWarning("Unable to find target matching {UserName}", userName);
+                _logger.LogWarning("Unable to find uploadTarget matching {UserName}", userName);
                 throw new ArgumentException();
             }
 
@@ -386,7 +390,7 @@ namespace ZoomFileManager.Services
                         .Request(),
                     _ => throw new ArgumentOutOfRangeException()
                 };
-              
+
             }
             catch (Exception e)
             {
@@ -397,7 +401,7 @@ namespace ZoomFileManager.Services
             IDriveItemChildrenCollectionPage? page;
             try
             {
-                page = await drive.GetAsync(cancellationToken);
+                page = await drive.GetAsync(cancellationToken).ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -405,7 +409,7 @@ namespace ZoomFileManager.Services
                 throw;
             }
 
-            var startingItems = await GetDriveItemsFromPageAsync(page, cancellationToken);
+            var startingItems = await GetDriveItemsFromPageAsync(page, cancellationToken).ConfigureAwait(false);
             if (startingItems == null)
                 throw new NullReferenceException();
             List<DriveItem> currentLevelChildren = startingItems.ToList();
@@ -418,8 +422,8 @@ namespace ZoomFileManager.Services
                         try
                         {
                             var children = await _gs.Users[target].Drive.Items[child.Id].Children
-                                .Request().GetAsync(cancellationToken);
-                            var s = await GetDriveItemsFromPageAsync(children, cancellationToken);
+                                .Request().GetAsync(cancellationToken).ConfigureAwait(false);
+                            var s = await GetDriveItemsFromPageAsync(children, cancellationToken).ConfigureAwait(false);
                             if (s != null)
                                 nextLevelChildren.AddRange(s);
                         }
@@ -483,5 +487,30 @@ namespace ZoomFileManager.Services
         // }
 
         #endregion
+
+        public async Task GetFilesAsync()
+        {
+            throw new NotImplementedException();
+        }
+        public async Task<UploadResult<DriveItem>> PutFileAsync(IFileInfo fileInfo, string? relativePath)
+        {
+            return await UploadTask(_targetName, fileInfo, relativePath, _targetType).ConfigureAwait(false);
+        }
+
+        public async Task<UploadResult<DriveItem>> PutFileAsync(string uploadTarget, IFileInfo filePath, string? relativePath)
+        {
+            throw new NotImplementedException();
+        }
+
+
+        public async Task DeleteFileAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task<UploadResult<DriveItem>> PutFileAsync(IFileInfo sourceFileInfo, string? relativePath, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

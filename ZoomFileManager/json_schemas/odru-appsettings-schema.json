@@ -1,0 +1,277 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "properties": {
+    "AppConfig": {
+      "$ref": "#/definitions/AppConfig"
+    },
+    "Serilog": {
+      "$ref": "https://gist.githubusercontent.com/turchenkoalex/ff9dc8443c3002eccf8df58020f82339/raw/6ae8d47908e49e0595694ea73e7f173ffb88cbf9/serilog-configuration-schema.json"
+    }
+  },
+  "type": "object",
+  "definitions": {
+    "AppSettings": {
+      "additionalProperties": {
+        "schema": {
+          "type": "string"
+        }
+      },
+      "properties": {
+        "AppConfig": {
+          "$ref": "#/definitions/AppConfig"
+        },
+        "Serilog": {
+          "$ref": "https://gist.githubusercontent.com/turchenkoalex/ff9dc8443c3002eccf8df58020f82339/raw/6ae8d47908e49e0595694ea73e7f173ffb88cbf9/serilog-configuration-schema.json"
+        }
+      },
+      "type": "object",
+      "uniqueItems": true
+    },
+    "AppConfig": {
+      "type": "object",
+      "description": "App specific configuration parameters",
+      "properties": {
+        "AllowedTokens": {
+          "$ref": "#/definitions/AllowedTokens"
+        },
+        "UploadConfigs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UploadConfig"
+          },
+          "additionalItems": false,
+          "title": "UploadConfigs",
+          "description": "Configurations for uploads, consumed by UploadTargets"
+        },
+        "UploadTargets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UploadTarget"
+          },
+          "additionalItems": false,
+          "title": "UploadTargets"
+        }
+      },
+      "additionalProperties": false
+    },
+    "UploadConfig": {
+      "type": "object",
+      "properties": {
+        "Type": {
+          "enum": [
+            "Sharepoint",
+            "OnedriveUser",
+            "OnedriveDrive",
+            "Dropbox"
+          ]
+      },
+      "Identifier": {
+        "type": "string"
+      },
+      "ClientConfig" :{
+        "type":"object"      }
+    },
+    "required": ["ClientConfig"],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "Type": {
+                "enum": [
+                  "Sharepoint"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "ClientConfig": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/SharepointClientConfig"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "Type": {
+                "enum": [
+                  "OnedriveUser"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "ClientConfig": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/OD_UserClientConfig"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "Type": {
+                "enum": [
+                  "OnedriveDrive"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "ClientConfig": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/OD_DriveClientConfig"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "Type": {
+                "enum": [
+                  "Dropbox"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "ClientConfig": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/DropboxClientConfig"
+                  }
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+        
+      ]
+    },
+    "UploadTarget": {
+      "type": "object",
+      "required": ["ConfigId"],
+      "properties": {
+        "ConfigId": {
+          "type": "string"
+        },
+        "RelativeUploadPath" : {
+          "type": ["string", "null"]
+        },
+        "NamingTemplate": {
+          "type": ["string", "null"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "AllowedTokens": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "additionalItems": false
+    },
+    "DropboxClientConfig": {
+      "type": "object",
+      "required": ["ApiKey", "AppSecret", "AdminTeamMemberId"],
+      "properties": {
+        "ApiKey": {
+          "type": "string"
+        },
+        "AppSecret": {
+          "type": "string"
+        },
+        "RefreshToken":{
+          "type": ["string","null"]
+        },
+        "AdminTeamMemberId": {
+          "type" :"string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "BaseODClientConfig": {
+      "required": ["ClientSecret", "TenantId", "ClientId"],
+      "properties": {
+        "ClientId": {
+          "type": "string"
+        },
+        "ClientSecret": {
+          "type": "string"
+        },
+        "TenantId": {
+          "type": "string"
+        },
+        "RootDirectory": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "OD_UserClientConfig": {
+      "type": "object",
+      "required": ["UserName"],
+      "allOf": [
+        {
+          "$ref": "#/definitions/BaseODClientConfig"
+        }
+      ],
+      "properties": {
+        "UserName": {
+          "type": "string"
+        }
+      }
+    },
+    "OD_DriveClientConfig": {
+      "type": "object",
+      "required": ["DriveId"],
+      "allOf": [
+        {
+          "$ref": "#/definitions/BaseODClientConfig"
+        }
+      ],
+      "properties": {
+        "DriveId": {
+          "type": "string"
+        }
+      }
+    },
+    "SharepointClientConfig": {
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/BaseODClientConfig"
+        }
+      ],
+      "required": ["SiteName"],
+      "properties": {
+        "SiteName": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

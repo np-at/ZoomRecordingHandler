@@ -25,7 +25,7 @@ namespace ZoomFileManager.Services
 {
     public class RecordingManagementServiceOptions
     {
-        public string[] Endpoints { get; set; } = Array.Empty<string>();
+        public string[]? Endpoints { get; set; } = Array.Empty<string>();
         public string? ReferralUrlBase { get; set; }
 
         public string[]? AllowedHostEmails { get; set; }
@@ -154,7 +154,7 @@ namespace ZoomFileManager.Services
             IFileInfo[] processedFiles;
             try
             {
-                processedFiles = await t;
+                processedFiles = await t.ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -169,18 +169,18 @@ namespace ZoomFileManager.Services
             var c = Task.WhenAll(uploadTasks);
             try
             {
-                var items = await c;
-                if (_serviceOptions.Endpoints.Any())
+                var items = await c.ConfigureAwait(false);
+                if (_serviceOptions.Endpoints?.Any() ?? false)
                     if (items.All(x => x.UploadSucceeded))
                     {
                         string itemResponseWebUrl = items.Last().ItemResponse.WebUrl;
                         string? userId = string.IsNullOrWhiteSpace(webhookEvent.Payload.Object.HostEmail)
                             ? string.Empty
-                            : await _slackApiHelpers.GetUserIdAsync(webhookEvent.Payload.Object.HostEmail);
+                            : await _slackApiHelpers.GetUserIdAsync(webhookEvent.Payload.Object.HostEmail).ConfigureAwait(false);
                         string? message =
                             $"{(string.IsNullOrWhiteSpace(webhookEvent.Payload.Object.HostEmail) ? string.Empty : "<@" + userId + '>')}Successfully uploaded recording: {webhookEvent.Payload.Object.Topic}. You can view them using this url: <{_serviceOptions.ReferralUrlBase + itemResponseWebUrl.Remove(itemResponseWebUrl.LastIndexOf('/'))}| onedrive folder link>";
                         foreach (string notificationEndpoint in _serviceOptions.Endpoints)
-                            await SendWebhookNotification(notificationEndpoint, message);
+                            await SendWebhookNotification(notificationEndpoint, message).ConfigureAwait(false);
                     }
             }
             catch (Exception e)
@@ -285,7 +285,7 @@ namespace ZoomFileManager.Services
                     }
 
                     int iterations = 0;
-                    bool fileLocked = !force || await IsFileLocked(fullPath);
+                    bool fileLocked = !force || await IsFileLocked(fullPath).ConfigureAwait(false);
                     while (fileLocked && iterations < 100)
                     {
                         iterations++;
@@ -308,7 +308,7 @@ namespace ZoomFileManager.Services
                         }
 
                         if (!force) continue;
-                        fileLocked = await IsFileLocked(testPath);
+                        fileLocked = await IsFileLocked(testPath).ConfigureAwait(false);
                         if (fileLocked) continue;
                         fullPath = testPath;
                         break;
@@ -329,15 +329,16 @@ namespace ZoomFileManager.Services
                 {
                     await using var fs = File.Create(fileInfo.PhysicalPath);
                     using var client = _httpClientFactory.CreateClient();
+                    using var s = _httpClientFactory.CreateClient("test");
 
                     using var response =
-                        await client.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead);
+                        await client.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
                     if (!response.IsSuccessStatusCode)
                         response.EnsureSuccessStatusCode();
-                    await using var stream = await response.Content.ReadAsStreamAsync();
+                    await using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
                     //stream.Seek(0, SeekOrigin.Begin);
 
-                    await stream.CopyToAsync(fs);
+                    await stream.CopyToAsync(fs).ConfigureAwait(false);
 
                     _logger.LogInformation("File saved as [{PhysicalPath}]", fileInfo.PhysicalPath);
                     return fileInfo;
@@ -370,7 +371,7 @@ namespace ZoomFileManager.Services
             string? jsonMessage = $"{{\"text\": \"{message}\"}}";
             using var client = _httpClientFactory.CreateClient();
             var responseMessage = await client.PostAsync(endpoint,
-                new StringContent(jsonMessage, Encoding.UTF8, "application/json"));
+                new StringContent(jsonMessage, Encoding.UTF8, "application/json")).ConfigureAwait(false);
             if (!responseMessage.IsSuccessStatusCode)
                 _logger.LogError(
                     "Unsuccessful in activating notification provider at endpoint: {Endpoint} \n for message: \n {Message}", endpoint, message);
@@ -380,10 +381,10 @@ namespace ZoomFileManager.Services
         {
             using var client = _httpClientFactory.CreateClient();
 
-            using var response = await client.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead);
+            using var response = await client.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
             _logger.LogDebug("Sent request", httpRequest);
 
-            if (response.IsSuccessStatusCode) return await response.Content.ReadAsStreamAsync();
+            if (response.IsSuccessStatusCode) return await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
 
             _logger.LogError("Error in download file request: {Response}", response);
             throw new HttpRequestException(

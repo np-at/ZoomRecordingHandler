@@ -40,7 +40,7 @@ namespace ZoomFileManager.Helpers
         /// <returns> <see cref="SlackAPI.User">Slack User Object Null if not found or error</see></returns>
         public async Task<User?> GetUserAsync(string userEmail)
         {
-            var response = await _slackTaskClient.GetUserByEmailAsync(userEmail);
+            var response = await _slackTaskClient.GetUserByEmailAsync(userEmail).ConfigureAwait(false);
             return response.ok ? response.user : null;
         }
 
@@ -51,7 +51,7 @@ namespace ZoomFileManager.Helpers
         /// <returns>Slack Id as string.  Null if not found or error</returns>
         public async Task<string?> GetUserIdAsync(string userEmail)
         {
-            var response = await _slackTaskClient.GetUserByEmailAsync(userEmail);
+            var response = await _slackTaskClient.GetUserByEmailAsync(userEmail).ConfigureAwait(false);
             return response.ok ? response.user.id : null;
         }
         
@@ -63,7 +63,7 @@ namespace ZoomFileManager.Helpers
         public async Task SendMessage(string message)
         {
 
-            var response = await _slackTaskClient.PostMessageAsync(_options.Channel, message);
+            var response = await _slackTaskClient.PostMessageAsync(_options.Channel, message).ConfigureAwait(false);
             if (response.ok)
                 return;
             throw new HttpRequestException(response.error);

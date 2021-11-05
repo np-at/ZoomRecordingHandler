@@ -4,32 +4,37 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Microsoft.Extensions.Logging;
-using Serilog;
 using ZoomFileManager.Models;
-using ILogger = Serilog.ILogger;
+
 
 namespace ZoomFileManager.BackgroundServices
 {
-    public class PChannel<T>
+    public class PChannel<T> : Channel<T>
     {
-        private readonly ILogger<PChannel<T>> _logger;
+   
         private readonly Channel<T> _eventChannel;
 
-        public PChannel(ILogger<PChannel<T>> logger)
+        private PChannel()
         {
-            _logger = logger;
+      
             var options = new UnboundedChannelOptions()
             {
                 
-                SingleReader = true,
+                SingleReader = false,
                 SingleWriter = true,
                 AllowSynchronousContinuations = false
             };
             _eventChannel = Channel.CreateUnbounded<T>(options);
         }
+
+        public static PChannel<T> CreateInstance()
+        {
+            return new PChannel<T>();
+        }
+
         public async Task<bool> AddEventAsync(T channelEvent, CancellationToken ct = default)
         {
-            while (await _eventChannel.Writer.WaitToWriteAsync(ct) && !ct.IsCancellationRequested)
+            while (await _eventChannel.Writer.WaitToWriteAsync(ct).ConfigureAwait(false) && !ct.IsCancellationRequested)
             {
                 if (_eventChannel.Writer.TryWrite(channelEvent))
                 {
@@ -42,25 +47,35 @@ namespace ZoomFileManager.BackgroundServices
             _eventChannel.Reader.WaitToReadAsync(ct);
         public ValueTask<T> ReadChannelEventAsync(CancellationToken ct = default) => _eventChannel.Reader.ReadAsync(ct);
         public bool TryCompleteWriter(Exception? ex = null) => _eventChannel.Writer.TryComplete(ex);
- 
+
+        public IAsyncEnumerable<T> ReadAllEventsAsync(CancellationToken ct = default) =>
+            _eventChannel.Reader.ReadAllAsync(ct);
+        
+        
+
     }
+
+    
     public class ProcessingChannel
     {
         private readonly ILogger<ProcessingChannel> _logger;
-        private readonly Channel<string> _channel;
-        private readonly Channel<ZoomWebhookEvent> _eventChannel;
+        private readonly PChannel<string> _channel;
+        private readonly PChannel<ZoomWebhookEvent> _zoomEventChannel;
+        private readonly PChannel<UploadJobSpec> _uploadJobChannel;
         
         public ProcessingChannel(ILogger<ProcessingChannel> logger)
         {
             _logger = logger;
+            _channel = PChannel<string>.CreateInstance();
             var options = new UnboundedChannelOptions()
             {
                 SingleReader = true,
                 SingleWriter = true,
                 AllowSynchronousContinuations = false
             };
-            _eventChannel = Channel.CreateUnbounded<ZoomWebhookEvent>(options);
-            _channel = Channel.CreateUnbounded<string>(options);
+            // _zoomEventChannel = Channel.CreateUnbounded<ZoomWebhookEvent>(options);
+            _zoomEventChannel = PChannel<ZoomWebhookEvent>.CreateInstance();
+            _uploadJobChannel = PChannel<UploadJobSpec>.CreateInstance();
         }
 
         internal static class EventIds
@@ -68,29 +83,47 @@ namespace ZoomFileManager.BackgroundServices
             public static readonly EventId ChannelMessageWritten = new EventId(100, "ChannelMessageWritten");
         }
 
-        public async Task<bool> AddZoomEventAsync(ZoomWebhookEvent zoomWebhookEvent, CancellationToken ct = default)
-        {
-            while (await _eventChannel.Writer.WaitToWriteAsync(ct) && !ct.IsCancellationRequested)
-            {
-                if (_eventChannel.Writer.TryWrite(zoomWebhookEvent))
-                {
-                    return true;
-                }
-            }
+        // public async Task<bool> AddZoomEventAsync(ZoomWebhookEvent zoomWebhookEvent, CancellationToken ct = default)
+        // {
+        //     while (await _zoomEventChannel.Writer.WaitToWriteAsync(ct).ConfigureAwait(false) && !ct.IsCancellationRequested)
+        //     {
+        //         if (_zoomEventChannel.Writer.TryWrite(zoomWebhookEvent))
+        //         {
+        //             return true;
+        //         }
+        //     }
+        //     return false;
+        // }
 
-            return false;
-        }
-
+        public async Task<bool> AddZoomEventAsync(ZoomWebhookEvent zoomWebhookEvent, CancellationToken ct = default) =>
+            await _zoomEventChannel.AddEventAsync(zoomWebhookEvent, ct);
+        // ZOOM EVENTS
         public ValueTask<bool> WaitToReadZoomEventAsync(CancellationToken ct = default) =>
-            _eventChannel.Reader.WaitToReadAsync(ct);
-        public ValueTask<ZoomWebhookEvent> ReadZoomEventAsync(CancellationToken ct = default) =>
-            _eventChannel.Reader.ReadAsync(ct);
+            _zoomEventChannel.WaitToReadChannelEventAsync(ct);
 
-        public IAsyncEnumerable<ZoomWebhookEvent> ReadAllZoomEventsAsync(CancellationToken ct = default) =>
-            _eventChannel.Reader.ReadAllAsync(ct);
+        public ValueTask<ZoomWebhookEvent> ReadZoomEventAsync(CancellationToken ct = default) =>
+            _zoomEventChannel.ReadChannelEventAsync(ct);
+            // _zoomEventChannel.Reader.ReadAsync(ct);
+
+            public IAsyncEnumerable<ZoomWebhookEvent> ReadAllZoomEventsAsync(CancellationToken ct = default) =>
+                _zoomEventChannel.ReadAllEventsAsync(ct);
+            // _zoomEventChannel.Reader.ReadAllAsync(ct);
+
+        // UPLOAD JOBS
+        public ValueTask<bool> WaitToReadUploadJobAsync(CancellationToken ct = default) =>
+            _uploadJobChannel.WaitToReadChannelEventAsync(ct);
+
+        public ValueTask<UploadJobSpec> ReadUploadJobAsync(CancellationToken ct = default) =>
+            _uploadJobChannel.ReadChannelEventAsync(ct);
+
+        public IAsyncEnumerable<UploadJobSpec> ReadAllUploadJobAsync(CancellationToken ct = default) =>
+            _uploadJobChannel.ReadAllEventsAsync(ct);
+
+        
+        // 
         public async Task<bool> AddFileAsync(string fileName, CancellationToken ct = default)
         {
-            while (await _channel.Writer.WaitToWriteAsync(ct) && !ct.IsCancellationRequested)
+            while (await _channel.Writer.WaitToWriteAsync(ct).ConfigureAwait(false) && !ct.IsCancellationRequested)
             {
                 if (_channel.Writer.TryWrite(fileName))
                 {

@@ -18,7 +18,7 @@ namespace ZoomFileManager.Extensions
             var allTasks = Task.WhenAll(tasks);
             try
             {
-                return await allTasks;
+                return await allTasks.ConfigureAwait(false);
             }
             catch (Exception)
             {
