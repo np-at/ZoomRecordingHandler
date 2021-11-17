@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Options;
 using Serilog.Extensions.Logging;
 using Xunit;
-using ZoomFileManager.BackgroundServices;
 using ZoomFileManager.Controllers;
 using Moq;
 
@@ -15,16 +14,13 @@ namespace ZoomFileManager.Tests.Controllers
         {
             var opts = new WebhookReceiversOptions()
             {
-AllowedTokens = System.Array.Empty<string>(),
-
-
+                AllowedTokens = System.Array.Empty<string>(),
             };
             var loggerFactory = new SerilogLoggerFactory();
-            
-            var controller = new WebhookReceiver(new Logger<WebhookReceiver>(loggerFactory), new OptionsWrapper<WebhookReceiversOptions>(new WebhookReceiversOptions()
-            ), new ProcessingChannel(new Logger<ProcessingChannel>(loggerFactory)));
-            
 
+            // var controller = new WebhookReceiver(new Logger<WebhookReceiver>(loggerFactory),
+            //     new OptionsWrapper<WebhookReceiversOptions>(new WebhookReceiversOptions()
+            //     ), new ProcessingChannel(new Logger<ProcessingChannel>(loggerFactory)));
         }
     }
 }

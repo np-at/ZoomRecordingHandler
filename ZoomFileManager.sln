@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZoomFileManager", "ZoomFile
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZoomfileManager.Tests", "ZoomfileManager.Tests\ZoomfileManager.Tests.csproj", "{C17364FD-4A50-433C-A765-97C53362F58A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZFHandler", "ZFHandler\ZFHandler.csproj", "{1BB25943-D56D-456D-B7F2-16D267154260}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -26,6 +28,12 @@ Global
 		{C17364FD-4A50-433C-A765-97C53362F58A}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C17364FD-4A50-433C-A765-97C53362F58A}.ReleaseSelf|Any CPU.ActiveCfg = Debug|Any CPU
 		{C17364FD-4A50-433C-A765-97C53362F58A}.ReleaseSelf|Any CPU.Build.0 = Debug|Any CPU
+		{1BB25943-D56D-456D-B7F2-16D267154260}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1BB25943-D56D-456D-B7F2-16D267154260}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1BB25943-D56D-456D-B7F2-16D267154260}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1BB25943-D56D-456D-B7F2-16D267154260}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1BB25943-D56D-456D-B7F2-16D267154260}.ReleaseSelf|Any CPU.ActiveCfg = Debug|Any CPU
+		{1BB25943-D56D-456D-B7F2-16D267154260}.ReleaseSelf|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

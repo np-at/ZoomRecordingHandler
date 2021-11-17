@@ -1,19 +1,29 @@
-﻿using System.Threading;
+﻿using System.Collections.Generic;
+using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ZFHandler.Mdtr.Commands;
+using ZFHandler.Models.ConfigurationSchemas;
 using ZoomFileManager.Models;
-using ZoomFileManager.Models.ConfigurationSchemas;
 
 namespace ZoomFileManager.Services
 {
-    public interface IDownloadService<T>
+    public interface IValidator<in T>
     {
-        public Task<bool> ValidateWebhookParametersAsync(T webhookEvent, CancellationToken ct = default);
-        public Task DownloadFromWebhookAsync(T webhookEvent, CancellationToken ct = default);
+        public ValueTask<bool> ValidateWebhookParametersAsync(T webhookEvent);
+
     }
 
-    public class DownloadService : IDownloadService<ZoomWebhookEvent>
+    
+    public interface IDownloadService<in T> : IValidator<T>
+    {
+        // public Task DownloadFromWebhookAsync(T webhookEvent, IHttpClientFactory httpClientFactory, CancellationToken ct = default);
+        public Task<IEnumerable<DownloadJob>> GenerateDownloadJobsFromWebhookAsync(T webhookEvent, CancellationToken ct = default);
+    }
+
+    public class DownloadService : IDownloadService<Zoominput>
     {
         private readonly ILogger<DownloadService> _logger;
         
@@ -22,12 +32,18 @@ namespace ZoomFileManager.Services
             _logger = logger;
         }
 
-        public async Task<bool> ValidateWebhookParametersAsync(ZoomWebhookEvent webhookEvent, CancellationToken ct = default)
+        public ValueTask<bool> ValidateWebhookParametersAsync(Zoominput webhookEvent)
+        {
+            return new ValueTask<bool>(true);
+        }
+
+        public async Task DownloadFromWebhookAsync(Zoominput webhookEvent, IHttpClientFactory httpClientFactory,
+            CancellationToken ct = default)
         {
             throw new System.NotImplementedException();
         }
 
-        public async Task DownloadFromWebhookAsync(ZoomWebhookEvent webhookEvent, CancellationToken ct = default)
+        public async Task<IEnumerable<DownloadJob>> GenerateDownloadJobsFromWebhookAsync(Zoominput webhookEvent, CancellationToken ct = default)
         {
             throw new System.NotImplementedException();
         }

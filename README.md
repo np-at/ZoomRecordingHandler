@@ -26,3 +26,10 @@ A simple webhook receiver that consumes a Zoom event.recordingcompleted and uplo
 
 5. Upload events are consumed from the upload channel by [tbd]() and an appropriate scoped service is created to handle the upload (depending on configuration defined by application config)
 
+
+## MISC
+
+### Scoping
+
+- Each download batch should be treated an as encapsulated unit.  Naming templates for both individual files and local encapsulating folders should be applied within the scope of the download process.
+  - This allows the upload batches limit concern to the specifics required for their individual targets.
