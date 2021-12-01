@@ -4,8 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using WebhookFileMover.Models.Configurations.ConfigurationSchemas;
 using ZFHandler.Mdtr.Commands;
-using ZFHandler.Models.ConfigurationSchemas;
 using ZoomFileManager.Models;
 
 namespace ZoomFileManager.Services

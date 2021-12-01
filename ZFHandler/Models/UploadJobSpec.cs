@@ -1,12 +1,12 @@
 ﻿using System;
 using System.IO;
 using MediatR;
+using WebhookFileMover.Models.Configurations.ConfigurationSchemas;
 using ZFHandler.Mdtr.Commands;
-using ZFHandler.Models.ConfigurationSchemas;
 
 namespace ZFHandler.Models
 {
-    public struct UploadJobSpec<T> : INotification where T : BaseClientConfig
+    public struct UploadJobSpec<T> : INotification
     {
         public string TargetDir;
         
@@ -22,6 +22,6 @@ namespace ZFHandler.Models
         public JobStatus Status { get; set; }
         public string Id { get; set; }
 
-
+        public ArraySegment<string> UploadTargetIds { get; set; }
     }
 }

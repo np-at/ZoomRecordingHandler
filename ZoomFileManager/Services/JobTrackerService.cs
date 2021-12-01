@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Transactions;
 using ZFHandler.Models;
-using ZoomFileManager.Models;
 
 namespace ZoomFileManager.Services
 {

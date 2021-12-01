@@ -1,26 +1,23 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
+using System.Reflection;
 using MediatR;
 using MediatR.Registration;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc.Routing;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Serilog;
+using WebhookFileMover.Extensions;
+using WebhookFileMover.Models.Configurations.ConfigurationSchemas;
+using WebhookFileMover.Models.Interfaces;
 using ZFHandler.CustomBuilders;
-using ZFHandler.Models.ConfigurationSchemas;
 using ZFHandler.Services;
 using ZoomFileManager.Controllers;
 using ZoomFileManager.Helpers;
 using ZoomFileManager.Models;
-using ZoomFileManager.Services;
 
 namespace ZoomFileManager
 {
@@ -36,16 +33,20 @@ namespace ZoomFileManager
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            var appConfigOptions = Configuration.GetSection("AppConfig").Get<AppConfig>();
-            services.Configure<BrokerServiceOptions>(o =>
-            {
-                o.UploadTargetConfigs = appConfigOptions.UploadConfigs;
-                o.UploadTargets = appConfigOptions.UploadTargets;
-            });
-            
+            var fileProvider = new PhysicalFileProvider(Path.GetTempPath());
 
-            ServiceRegistrar.AddRequiredServices(services, new MediatRServiceConfiguration());
-            // services.AddReceivers(typeof(Startup).Assembly);
+            var appConfigOptions = Configuration.GetSection("AppConfig").Get<AppConfig>();
+            // services.Configure<BrokerServiceOptions>(o =>
+            // {
+            //     o.UploadTargetConfigs = appConfigOptions.UploadConfigs;
+            //     o.UploadTargets = appConfigOptions.UploadTargets;
+            // });
+         
+
+         
+            
+            
+            
             services.AddHealthChecks();
             services.AddHttpClient();
             services.AddHttpClient("dropbox", c => { c.Timeout = TimeSpan.FromMinutes(10); });
@@ -59,7 +60,6 @@ namespace ZoomFileManager
             }));
             // services.Configure<SlackApiOptions>(x => appConfigOptions.Bind("SlackApiOptions", x));
             // services.Configure<OneDriveClientConfig>(x => appConfigOptions.Bind("OneDriveClientConfig", x));
-            var fileProvider = new PhysicalFileProvider(Path.GetTempPath());
             // services.AddSingleton<ProcessingChannel>();
             // services.AddHostedService<ZoomEventProcessingService>();
             services.AddSingleton<IFileProvider>(fileProvider);
@@ -74,8 +74,18 @@ namespace ZoomFileManager
             // services.AddTransient<SlackApiHelpers>();
             //
             // services.AddTransient(typeof(ZoomWebhookHandler));
-            services.AddControllers();
-            services.AddTemporaryMediatrConfig();
+            // services.AddControllers();
+            // services.AddReceivers(config =>
+            // {
+            //     config.AllowedTokens = appConfigOptions.AllowedTokens;
+            //     config.NotificationOptions = appConfigOptions.NotificationOptions;
+            //     config.ReceiverConfigs = appConfigOptions.ReceiverConfigs;
+            //     config.UploadConfigs = appConfigOptions.UploadConfigs;
+            //     config.UploadTargets = appConfigOptions.UploadTargets;
+            //     config.SlackApiOptions = appConfigOptions.SlackApiOptions;
+            // });
+            services.AddTransient<IWebhookDownloadJobTransformer<Zoominput>, ZoominputTransformer>();
+            services.TestAddR(new [] { typeof(Zoominput).GetTypeInfo() }, appConfigOptions);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

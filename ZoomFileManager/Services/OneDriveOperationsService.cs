@@ -42,7 +42,7 @@
 //             _options = options;
 //             _rootUploadPath = options.Value.RootDirectory;
 //             _targetType = TargetType.Site;
-//             _targetName = options.Value?.SiteName ?? throw new NullReferenceException("SiteName Not Provided for Sharepoint Configuration");
+//             _targetName = options.Value?.SiteRelativePath ?? throw new NullReferenceException("SiteRelativePath Not Provided for Sharepoint Configuration");
 //
 //         }
 //
@@ -79,19 +79,19 @@
 //         //     _rootUploadPath = options.Value.RootDirectory;
 //         //     
 //         //     int s = (2 * Convert.ToByte(!IsNullOrWhiteSpace(options.Value.UserName))) +
-//         //             (3 * Convert.ToByte(!IsNullOrWhiteSpace(options.Value.SiteName))) +
+//         //             (3 * Convert.ToByte(!IsNullOrWhiteSpace(options.Value.SiteRelativePath))) +
 //         //             (4 * Convert.ToByte(!IsNullOrWhiteSpace(options.Value.DriveId)));
 //         //     _targetType = s switch
 //         //     {
 //         //         2 => TargetType.User,
 //         //         3 => TargetType.Site,
 //         //         4 => TargetType.Drive,
-//         //         _ => throw new ArgumentException("Must provide exactly one of UserName or SiteName or DriveId")
+//         //         _ => throw new ArgumentException("Must provide exactly one of UserName or SiteRelativePath or DriveId")
 //         //     };
 //         //     _targetName = _targetType switch
 //         //     {
 //         //         TargetType.Drive => options.Value.DriveId,
-//         //         TargetType.Site => options.Value.SiteName,
+//         //         TargetType.Site => options.Value.SiteRelativePath,
 //         //         TargetType.User => options.Value.UserName,
 //         //         _ => throw new ArgumentOutOfRangeException()
 //         //     } ?? throw new InvalidOperationException();

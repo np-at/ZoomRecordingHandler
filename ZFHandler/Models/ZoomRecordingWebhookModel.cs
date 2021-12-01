@@ -16,8 +16,9 @@ using MediatR;
 using NodaTime;
 using NodaTime.Extensions;
 using NodaTime.TimeZones;
+using WebhookFileMover.Models;
+using WebhookFileMover.Models.Interfaces;
 using ZFHandler.Controller;
-using ZFHandler.Mdtr.Commands;
 
 
 namespace ZoomFileManager.Models
@@ -25,6 +26,40 @@ namespace ZoomFileManager.Models
     using System;
     using System.Collections.Generic;
     using System.Text.Json.Serialization;
+
+    public class ZoominputTransformer : IWebhookDownloadJobTransformer<Zoominput>
+    {
+        public async ValueTask<IEnumerable<WebhookFileMover.Models.DownloadJob>> TransformWebhook(Zoominput webhook, CancellationToken cancellationToken = default)
+        {
+            if (webhook?.Payload?.Object?.RecordingFiles == null)
+                throw new NullReferenceException("webhook event was null somehow");
+            var downloadJobs = new List<DownloadJob>();
+            foreach (var item in webhook.Payload.Object.RecordingFiles)
+            {
+                var req = new HttpRequestMessage(HttpMethod.Get, item?.DownloadUrl ?? string.Empty);
+                req.Headers.Add("authorization",
+                    $"Bearer {webhook.DownloadToken ?? webhook.Payload.DownloadToken}");
+                req.Headers.Add("Accept", "*/*");
+                // req.Headers.Add("content-type", "application/json");
+                if (item == null)
+                {
+                    // Log.Error("null Recording file, wtf?");
+                    throw new Exception();
+                }
+
+                var dlJob = new DownloadJob()
+                {
+                    Message = req,
+                    DestinationFileName = Zoominput.NameTransformationFunc(item),
+                    DestinationFolderPath = Zoominput.FolderNameTransformationFunc(webhook)
+                };
+                downloadJobs.Add(dlJob);
+            }
+
+            return downloadJobs;
+        }
+    }
+
 
     [CreateReceiver("api/test")]
     public class Zoominput : IRConv<Zoominput>
@@ -65,8 +100,7 @@ namespace ZoomFileManager.Models
         [JsonPropertyName("payload")]
         public Payload Payload { get; set; }
 
-        public async Task<IEnumerable<DownloadJob>> ConvertToDownloadJobAsync(Zoominput input,
-            CancellationToken ct = default)
+        public static IEnumerable<DownloadJob> ConvertToDownloadJobs(Zoominput input)
         {
             if (input?.Payload?.Object?.RecordingFiles == null)
                 throw new NullReferenceException("webhook event was null somehow");
@@ -86,6 +120,36 @@ namespace ZoomFileManager.Models
 
                 var dlJob = new DownloadJob()
                 {
+                    Message = req,
+                    DestinationFileName = NameTransformationFunc(item),
+                    DestinationFolderPath = FolderNameTransformationFunc(input)
+                };
+                downloadJobs.Add(dlJob);
+            }
+          
+            return downloadJobs;
+        }
+        public static async ValueTask<IEnumerable<ZFHandler.Mdtr.Commands.DownloadJob>> ConvertToDownloadJobAsync(Zoominput input,
+            CancellationToken? ct = default)
+        {
+            if (input?.Payload?.Object?.RecordingFiles == null)
+                throw new NullReferenceException("webhook event was null somehow");
+            var downloadJobs = new List<ZFHandler.Mdtr.Commands.DownloadJob>();
+            foreach (var item in input.Payload.Object.RecordingFiles)
+            {
+                var req = new HttpRequestMessage(HttpMethod.Get, item?.DownloadUrl ?? string.Empty);
+                req.Headers.Add("authorization",
+                    $"Bearer {input.DownloadToken ?? input.Payload.DownloadToken}");
+                req.Headers.Add("Accept", "*/*");
+                // req.Headers.Add("content-type", "application/json");
+                if (item == null)
+                {
+                    // Log.Error("null Recording file, wtf?");
+                    throw new Exception();
+                }
+
+                var dlJob = new ZFHandler.Mdtr.Commands.DownloadJob()
+                {
                     message = req,
                     DestinationFileName = NameTransformationFunc(item),
                     DestinationFolderPath = FolderNameTransformationFunc(input)
@@ -99,7 +163,7 @@ namespace ZoomFileManager.Models
 
         private static readonly Regex _invalidFileNameChars = new("[\\\\/:\"*?<>|'`]+");
 
-        private  string FolderNameTransformationFunc(Zoominput webhookEvent)
+        internal static  string FolderNameTransformationFunc(Zoominput webhookEvent)
         {
             DateTimeZone usingTimeZone;
             try
@@ -120,7 +184,7 @@ namespace ZoomFileManager.Models
             return _invalidFileNameChars.Replace(st, string.Empty).Replace(" ", "_");
         }
 
-        private string NameTransformationFunc(RecordingFile recordingFile)
+        internal static string NameTransformationFunc(RecordingFile recordingFile)
         {
             var sb = new StringBuilder();
             sb.Append(recordingFile?.Id ?? recordingFile?.FileType ?? string.Empty);
@@ -130,6 +194,7 @@ namespace ZoomFileManager.Models
 
             return _invalidFileNameChars.Replace(sb.ToString(), string.Empty).Replace(" ", "_");
         }
+        
     }
 
     public partial class Payload

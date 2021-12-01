@@ -29,7 +29,13 @@ A simple webhook receiver that consumes a Zoom event.recordingcompleted and uplo
 
 ## MISC
 
+
 ### Scoping
 
 - Each download batch should be treated an as encapsulated unit.  Naming templates for both individual files and local encapsulating folders should be applied within the scope of the download process.
   - This allows the upload batches limit concern to the specifics required for their individual targets.
+
+
+## Flow2
+
+1. AddReceiver(string path)

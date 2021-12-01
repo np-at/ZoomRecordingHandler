@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using ZFHandler.Models.ConfigurationSchemas;
+using WebhookFileMover.Models.Configurations.ConfigurationSchemas;
 
 namespace ZFHandler.CustomBuilders
 {

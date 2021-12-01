@@ -9,26 +9,31 @@
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
-      <DebugType>full</DebugType>
+        <DebugType>full</DebugType>
     </PropertyGroup>
 
 
     <ItemGroup Condition=" '$(Configuration)' == 'Debug' ">
-        <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.11.1" />
         <PackageReference Include="Newtonsoft.Json.Schema" Version="3.0.14" />
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="Azure.Identity" Version="1.5.0" />
-        <PackageReference Include="Microsoft.Extensions.Options" Version="5.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Http" Version="5.0.0" />
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
-      <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="9.0.0" />
-      <PackageReference Include="Microsoft.Graph" Version="4.9.0" />
-      <PackageReference Include="NodaTime" Version="3.0.9" />
+        <PackageReference Include="Disruptor" Version="4.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Options" Version="6.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Http" Version="6.0.0" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="6.0.0" />
+        <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="9.0.0" />
+        <PackageReference Include="Microsoft.Graph" Version="4.11.0" />
+        <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.14.0" />
+        <PackageReference Include="NodaTime" Version="3.0.9" />
     </ItemGroup>
     <ItemGroup>
-      <Folder Include="Services\BaseProviderImplementations" />
+        <Folder Include="CustomBuilders\Pipelines" />
+        <Folder Include="Services\BaseProviderImplementations" />
+    </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\WebhookFileMover\WebhookFileMover.csproj" />
     </ItemGroup>
 
 

@@ -25,5 +25,4 @@ ARG BUILD_ENV=prod
 RUN adduser -D hostinguser
 RUN chown -R hostinguser /app
 USER hostinguser
-HEALTHCHECK CMD curl --fail http://localhost:8080/healthcheck || exit 1
 ENTRYPOINT ["dotnet", "ZoomFileManager.dll"]

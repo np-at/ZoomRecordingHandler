@@ -1,19 +1,11 @@
-﻿using System;
-using System.Buffers;
-using System.Collections.Generic;
-using System.IO;
-using System.IO.Pipelines;
+﻿using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 
 namespace ZoomFileManager.Helpers
 {
     using System;
-    using System.IO;
 
-    
-      
+
     public class NoDedicatedThreadQueue
     {
         private Queue<string> _jobs = new Queue<string>();

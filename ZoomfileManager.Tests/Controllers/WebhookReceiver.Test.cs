@@ -1,9 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Serilog.Extensions.Logging;
+﻿using Serilog.Extensions.Logging;
 using Xunit;
 using ZoomFileManager.Controllers;
-using Moq;
 
 namespace ZoomFileManager.Tests.Controllers
 {

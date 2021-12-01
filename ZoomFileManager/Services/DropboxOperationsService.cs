@@ -8,11 +8,9 @@ using System.Threading.Tasks;
 using Dropbox.Api;
 using Dropbox.Api.Common;
 using Dropbox.Api.Files;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Graph;
-using ZFHandler.Models.ConfigurationSchemas;
+using WebhookFileMover.Models.Configurations.ConfigurationSchemas.ClientConfigs.Dropbox;
 using ZoomFileManager.Helpers;
 
 namespace ZoomFileManager.Services

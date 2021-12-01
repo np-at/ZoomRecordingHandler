@@ -1,8 +1,6 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using System.Text;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
@@ -38,7 +36,7 @@ namespace ZoomFileManager.Controllers
         {
             context.Request.EnableBuffering();
 
-            string? tempPath = Path.Join(Path.GetTempPath(), "asdf");
+            string? tempPath = Path.Join(Path.GetTempPath(), "TransformFunction");
 
             try
             {
@@ -107,14 +105,22 @@ namespace ZoomFileManager.Controllers
         public async Task<IActionResult> ReceiveNotificationV2([FromBody] Zoominput webhookEvent,
             CancellationToken cancellationToken)
         {
-            var dlJob = await _downloadService.GenerateDownloadJobsFromWebhookAsync(webhookEvent, cancellationToken);
-            foreach (var downloadJob in dlJob)
+            try
             {
-                await _mediator.Publish(downloadJob, cancellationToken).ConfigureAwait(false);
-            }
+                var dlJob = await _downloadService.GenerateDownloadJobsFromWebhookAsync(webhookEvent, cancellationToken);
+                foreach (var downloadJob in dlJob)
+                {
+                    await _mediator.Publish(downloadJob, cancellationToken).ConfigureAwait(false);
+                }
 
-            return new AcceptedResult();
-                
+                return new AcceptedResult();
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
                 
             // await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken).ConfigureAwait(false);
             // var result = await _mediator.Send();

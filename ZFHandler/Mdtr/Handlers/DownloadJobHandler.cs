@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,27 +10,21 @@ using MediatR;
 using Microsoft.Extensions.FileProviders.Physical;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using WebhookFileMover.Models.Configurations.ConfigurationSchemas.ClientConfigs;
+using WebhookFileMover.Pipelines.TPL;
+using WebhookFileMover.Providers.Download;
 using ZFHandler.Mdtr.Commands;
 using ZFHandler.Services;
 
 namespace ZFHandler.Mdtr.Handlers
 {
-    public enum FileExistsBehavior
+    public class DownloadJobHandlerOptions<T> : DownloadJobHandlerOptions
     {
-        Unknown,
-        Overwrite,
-        Rename,
-        Error
+    
     }
-
-    public class DownloadJobHandlerOptions
-    {
-        public string RootDirectory { get; set; }
-
-        public FileExistsBehavior FileExistsBehavior { get; set; } = FileExistsBehavior.Overwrite;
-    }
-
-    public class DownloadJobHandler : IRequestHandler<DownloadJob, FileInfo?>
+   
+    
+    public class DownloadJobHandler : IRequestHandler<DownloadJob, FileInfo?>, IImplementer<DownloadJobBatch, IEnumerable<FileInfo?>>
     {
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<DownloadJobHandler> _logger;
@@ -44,7 +40,8 @@ namespace ZFHandler.Mdtr.Handlers
 
         public async Task<FileInfo?> Handle(DownloadJob notification, CancellationToken cancellationToken)
         {
-            JobTracker.DownloadJobs[notification.Id].Status = JobStatus.InProgress;
+            if (JobTracker.DownloadJobs.ContainsKey(notification.Id))
+                JobTracker.DownloadJobs[notification.Id].Status = JobStatus.InProgress;
             // make sure the parent directory is there.  This should be a thread safe operation
             try
             {
@@ -102,7 +99,8 @@ namespace ZFHandler.Mdtr.Handlers
                 await stream.CopyToAsync(fs, cancellationToken).ConfigureAwait(false);
                 await fs.FlushAsync(cancellationToken);
                 _logger.LogDebug("File Downloaded and saved to {@FileInfo}", destinationFileInfo);
-                JobTracker.DownloadJobs[notification.Id].DestinationFile = destFileInfo;
+                if (JobTracker.DownloadJobs.ContainsKey(notification.Id))
+                    JobTracker.DownloadJobs[notification.Id].DestinationFile = destFileInfo;
                 return destFileInfo;
             }
             catch (HttpRequestException e)
@@ -269,5 +267,31 @@ namespace ZFHandler.Mdtr.Handlers
         //         throw;
         //     }
         // }
+        public async Task<IEnumerable<FileInfo?>> Handle(DownloadJobBatch input, CancellationToken cancellationToken = default)
+        {
+            List<FileInfo?> files = new();
+            List<Exception> exceptions = new();
+            if (input.Jobs == null) return files;
+            
+            foreach (var downloadJob in input.Jobs)
+            {
+                try
+                {
+                    var res = await this.Handle(downloadJob, cancellationToken);
+                    files.Add(res);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "error while downloading file: {0}", downloadJob.DestinationFileName);
+                    exceptions.Add(e);
+                    
+                }
+            }
+
+            if (exceptions.Any())
+                throw new AggregateException(exceptions);
+
+            return files;
+        }
     }
 }

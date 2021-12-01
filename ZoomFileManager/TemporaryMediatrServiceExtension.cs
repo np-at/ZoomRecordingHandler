@@ -1,23 +1,20 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using MediatR;
-using MediatR.Pipeline;
 using MediatR.Registration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using WebhookFileMover.Models.Configurations.ConfigurationSchemas.ClientConfigs.Dropbox;
+using WebhookFileMover.Models.Configurations.ConfigurationSchemas.ClientConfigs.OneDrive;
 using ZFHandler.Controller;
 using ZFHandler.Mdtr.Commands;
 using ZFHandler.Mdtr.Handlers;
 using ZFHandler.Models;
-using ZFHandler.Models.ConfigurationSchemas;
 using ZFHandler.Services;
 using ZoomFileManager.Models;
-using ZoomFileManager.Services;
-using JobTracker = ZFHandler.Services.JobTracker;
 
 namespace ZoomFileManager
 {
@@ -46,7 +43,7 @@ namespace ZoomFileManager
               
             
             services.TryAddTransient<IRequestHandler<DownloadJob,FileInfo?>, DownloadJobHandler>();
-            services.TryAddSingleton<INotificationHandler<DownloadJobBatch>, BrokerService>();
+            // services.TryAddSingleton<INotificationHandler<DownloadJobBatch>, BrokerService>();
             
             
             services

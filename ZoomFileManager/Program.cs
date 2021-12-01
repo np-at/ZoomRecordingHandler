@@ -38,7 +38,6 @@ namespace ZoomFileManager
             .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
             .AddEnvironmentVariables()
             .AddJsonFile(Environment.GetEnvironmentVariable("ZF_SECRETS_FILE") ?? "/run/secrets/zoomFileManager_settings", true)
-
             .Build();
 
         private static IHostBuilder CreateHostBuilder(string[] args) =>

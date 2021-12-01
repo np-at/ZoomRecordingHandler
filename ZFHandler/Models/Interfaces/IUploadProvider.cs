@@ -16,35 +16,5 @@ namespace ZFHandler.Models.Interfaces
         Task UpdateFileAsync(CancellationToken cancellationToken = default);
     }
 
-    public abstract class UploadProvider<T> : IUploadProvider where T : class
-    {
-        protected UploadProvider()
-        {
-            
-        }
-        public async Task PutFileAsync(CancellationToken cancellationToken = default)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public async Task GetFileInfoAsync(CancellationToken cancellationToken = default)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public async Task GetFileListAsync(CancellationToken cancellationToken = default)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public async Task DeleteFileAsync(CancellationToken cancellationToken = default)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public async Task UpdateFileAsync(CancellationToken cancellationToken = default)
-        {
-            throw new System.NotImplementedException();
-        }
-    }
+   
 }

@@ -1,6 +1,5 @@
 ﻿using System.Collections.Concurrent;
 using ZFHandler.Mdtr.Commands;
-using ZFHandler.Models;
 
 namespace ZFHandler.Services
 {
