@@ -6,22 +6,22 @@ using WebhookFileMover.Models.Configurations.ConfigurationSchemas;
 
 namespace WebhookFileMover.Extensions
 {
-    public class WFMBuilder
+    public class WfmBuilder
     {
         internal IServiceCollection ServiceCollection;
-        internal string _receiverId = Guid.NewGuid().ToString("N");
+        internal readonly string ReceiverId = Guid.NewGuid().ToString("N");
 
-        public WFMBuilder(ref IServiceCollection serviceCollection)
+        public WfmBuilder(ref IServiceCollection serviceCollection)
         {
             ServiceCollection = serviceCollection;
         }
 
-        public WFMBuilder<T> RegisterReceiverConfig<T>(AppConfig appConfig, bool debug = false)
+        public WfmBuilder<T> RegisterReceiverConfig<T>(AppConfig appConfig) where T : class, new()
         {
-            return new WFMBuilder<T>(ref ServiceCollection)
+            return new WfmBuilder<T>(ref ServiceCollection)
             {
                 AppConfig = appConfig,
-                ReceiverEndpointConfig = appConfig?.ReceiverEndpointConfigs?.SingleOrDefault(x =>
+                ReceiverEndpointConfig = appConfig.ReceiverEndpointConfigs?.SingleOrDefault(x =>
                     x.ModelTypeName?.Equals(typeof(T).Name, StringComparison.InvariantCultureIgnoreCase) ?? false) ?? throw new KeyNotFoundException("Receiver Endpoint Config for Provided Model Type Not found")
             };
         }

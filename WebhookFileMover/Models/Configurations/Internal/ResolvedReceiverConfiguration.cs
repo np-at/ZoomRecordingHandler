@@ -6,7 +6,7 @@ namespace WebhookFileMover.Models.Configurations.Internal
 {
     public class ResolvedReceiverConfiguration
     {
-        public string Id { get; set; }
+        public string Id { get; set; } = Guid.NewGuid().ToString("N");
 
         public IEnumerable<ResolvedUploadTarget> ResolvedUploadTargets { get; set; } =
             Array.Empty<ResolvedUploadTarget>();

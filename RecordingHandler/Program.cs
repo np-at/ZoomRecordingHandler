@@ -9,6 +9,17 @@ namespace RecordingHandler
 {
     public static class Program
     {
+        static Program()
+        {
+            Configuration = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
+                .AddEnvironmentVariables()
+                .AddJsonFile(Environment.GetEnvironmentVariable("ZF_SECRETS_FILE") ?? "/run/secrets/zoomFileManager_settings", true)
+                .Build();
+        }
+
         public static void Main(string[] args)
         {
             if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.Equals("Development", StringComparison.InvariantCultureIgnoreCase) ?? false)
@@ -32,19 +43,13 @@ namespace RecordingHandler
                 Log.CloseAndFlush();
             }
         }
-        internal static IConfiguration Configuration { get; } = new ConfigurationBuilder()
-            .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-            .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
-            .AddEnvironmentVariables()
-            .AddJsonFile(Environment.GetEnvironmentVariable("ZF_SECRETS_FILE") ?? "/run/secrets/zoomFileManager_settings", true)
-            .Build();
+        internal static IConfiguration Configuration { get; }
         
         private static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder.UseStartup<Startup>().UseUrls(new[] { "http://0.0.0.0:8080"});
+                    webBuilder.UseStartup<Startup>().UseUrls("http://0.0.0.0:8080");
                     webBuilder.UseSerilog();
                     webBuilder.UseConfiguration(Configuration);
                 });

@@ -10,6 +10,7 @@ using Microsoft.Extensions.FileProviders;
 using WebhookFileMover.BackgroundServices;
 using WebhookFileMover.Channels;
 using WebhookFileMover.Controllers;
+using WebhookFileMover.Helpers;
 using WebhookFileMover.Models.Configurations;
 using WebhookFileMover.Models.Configurations.Internal;
 using WebhookFileMover.Services;
@@ -59,13 +60,15 @@ namespace WebhookFileMover.Extensions
             serviceCollection.AddHostedService<NotificationBrokerService>();
             
             
+            serviceCollection.TryAddTransient<TemplateResolverService>();
+            
             serviceCollection.TryAddTransient<INotificationEvaluator, NotificationEvaluatorService>();
             // Configure webhook receivers for specified types
             serviceCollection.AddControllers().ConfigureApplicationPartManager(p => p.FeatureProviders.Add(
                 new GenericControllerFeatureProvider(ServiceRegistrationExtensions.Types)));
         }
 
-        public static WFMBuilder InitializeReceiverBuilder(this IServiceCollection serviceCollection) =>
-            new WFMBuilder(ref serviceCollection);
+        public static WfmBuilder InitializeReceiverBuilder(this IServiceCollection serviceCollection) =>
+            new(ref serviceCollection);
     }
 }

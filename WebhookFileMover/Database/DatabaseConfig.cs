@@ -1,11 +1,8 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-
-namespace WebhookFileMover.Database
+﻿namespace WebhookFileMover.Database
 {
     public class DatabaseConfig
     {
-        public string? Name { get; set; }
+        public string? Name { get; init; }
     }
 
   

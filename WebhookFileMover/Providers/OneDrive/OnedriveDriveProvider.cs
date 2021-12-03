@@ -36,7 +36,7 @@ namespace WebhookFileMover.Providers.OneDrive
         // }
 
 
-        internal override async Task<IUploadSession> CreateUploadSession(ResolvedUploadJob resolvedUploadJob,
+        protected override async Task<IUploadSession> CreateUploadSession(ResolvedUploadJob resolvedUploadJob,
             CancellationToken cancellationToken = default)
         {
             var gs = CreateGraphClient(resolvedUploadJob);

@@ -28,9 +28,10 @@ namespace WebhookFileMover.BackgroundServices
         private async Task HandleNotificationAsync(Notification notification, CancellationToken cancellationToken)
         {
              using var scope = _serviceProvider.CreateScope();
-             INotificationProvider process = notification.NotificationProviderConfig.ProviderType switch
+             INotificationProvider process = notification.NotificationProviderConfig?.ProviderType switch
              {
                  NotificationProviderType.SlackBot => scope.ServiceProvider.GetRequiredService<SlackNotificationProvider>(),
+                 NotificationProviderType.Webhook => scope.ServiceProvider.GetRequiredService<WebhookNotificationProvider>(),
                  NotificationProviderType.Unknown => throw new Exception("Notification Provider Type not Specified"),
                  _ => throw new ArgumentOutOfRangeException()
              };

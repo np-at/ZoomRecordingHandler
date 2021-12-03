@@ -22,7 +22,7 @@ namespace WebhookFileMover.Providers.OneDrive
             _logger = logger;
         }
 
-        internal abstract Task<IUploadSession> CreateUploadSession(ResolvedUploadJob resolvedUploadJob,
+        protected abstract Task<IUploadSession> CreateUploadSession(ResolvedUploadJob resolvedUploadJob,
             CancellationToken cancellationToken = default);
 
         // internal async Task<UploadResult<DriveItem>> UploadFileForProviderAsync(string providerName,
@@ -71,10 +71,9 @@ namespace WebhookFileMover.Providers.OneDrive
         //     return await PerformUpload(uploadSession, fileStream, token).ConfigureAwait(false);
         // }
         internal static GraphServiceClient CreateGraphClient(ResolvedUploadJob resolvedUploadJob) =>
-            new(OneDriveClientConfigExtensions.OnedriveHelpers.DoAuth(resolvedUploadJob.UploadTargetConfig
-                .ClientConfig ?? throw new InvalidOperationException()));
+            new(OneDriveClientConfigExtensions.OnedriveHelpers.DoAuth(resolvedUploadJob.UploadTargetConfig?.ClientConfig ?? throw new InvalidOperationException()));
 
-        internal async Task<UploadResult<DriveItem>> PUplaod(ResolvedUploadJob resolvedUploadJob,
+        private async Task<UploadResult<DriveItem>> PUplaod(ResolvedUploadJob resolvedUploadJob,
             IUploadSession? uploadSession = null,
             CancellationToken cancellationToken = default)
         {

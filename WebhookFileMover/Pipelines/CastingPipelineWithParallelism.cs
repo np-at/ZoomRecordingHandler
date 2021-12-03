@@ -39,7 +39,7 @@ namespace WebhookFileMover.Pipelines
     public class GenericBCPipeline<TPipeIn, TPipeOut>
     {
         private List<object> _pipelineSteps = new();
-        public event Action<TPipeOut> Finished;
+        public event Action<TPipeOut>? Finished;
 
         public GenericBCPipeline(Func<TPipeIn, GenericBCPipeline<TPipeIn, TPipeOut>, TPipeOut> steps)
         {

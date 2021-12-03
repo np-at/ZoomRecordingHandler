@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Dapper;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
@@ -18,21 +19,23 @@ namespace WebhookFileMover.Database
 
         public void Setup()
         {
-            using var connection = new SqliteConnection(_databaseConfig.Name);
+            try
+            {
+                using var connection = new SqliteConnection(_databaseConfig.Name);
 
 
 #if DEBUG
-            connection.Execute(@"drop table if exists JobTaskInstances;
+                connection.Execute(@"drop table if exists JobTaskInstances;
                                      drop table if exists Jobs;");
 #endif
-            var table = connection.Query<string>(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name = 'Jobs';");
-            var tableName = table.FirstOrDefault();
-            if (!string.IsNullOrEmpty(tableName) && tableName == "Jobs")
-                return;
-    
-            // connection.Execute("Create Table Jobs (Name VARCHAR(100) NOT NULL,Source VARCHAR(1000) NOT NULL);");
-            connection.Execute(@"create table Jobs (
+                var table = connection.Query<string>(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name = 'Jobs';");
+                var tableName = table.FirstOrDefault();
+                if (!string.IsNullOrEmpty(tableName) && tableName == "Jobs")
+                    return;
+
+                // connection.Execute("Create Table Jobs (Name VARCHAR(100) NOT NULL,Source VARCHAR(1000) NOT NULL);");
+                connection.Execute(@"create table Jobs (
                                         Id INTEGER PRIMARY KEY AUTOINCREMENT
                                         constraint Jobs_pk,
                                         
@@ -57,7 +60,13 @@ namespace WebhookFileMover.Database
                                     
                                     create unique index JobTaskInstances_Id_uindex
                                         on JobTaskInstances (Id);"
-            );
+                );
+            }
+            catch (Exception e)
+            {
+                _logger.LogCritical(e, "Error during database bootstrapping");
+                throw;
+            }
         }
     }
 }

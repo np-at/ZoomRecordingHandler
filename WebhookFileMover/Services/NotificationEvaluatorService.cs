@@ -45,11 +45,11 @@ namespace WebhookFileMover.Services
             var resolvedReceiverConfiguration = _receiverOptionsSnapshot.Get(job.AssociatedReceiverId) ?? throw new KeyNotFoundException("Unable to locate corresponding Receiver id for job");
             foreach (var notificationProviderConfig in resolvedReceiverConfiguration.NotificationProviderConfigs)
             {
-                var notification = new Notification()
+                var notification = new Notification
                 {
                     Job = job,
                     NotificationProviderConfig = notificationProviderConfig,
-                    WebEventStringBody = job.RawMessage
+                    WebEventStringBody = job.RawMessage ?? string.Empty
                 };
                 await _jobQueueChannel.AddNotificationAsync(notification).ConfigureAwait(false);
             }
@@ -79,7 +79,7 @@ namespace WebhookFileMover.Services
 
             if (parent.JobTaskInstances?.All(x =>
                     x.Status is TaskInstanceStatus.Finished or TaskInstanceStatus.Failed) ??
-                throw new Exception($"No children Task instances found for parent job: {@parent}"))
+                throw new Exception($"No children Task instances found for parent job: {parent}"))
                 return parent;
             return null;
         }

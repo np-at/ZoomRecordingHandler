@@ -10,10 +10,6 @@ namespace WebhookFileMover.Controllers
     {
         private readonly TypeInfo[]? _types;
 
-        public GenericControllerFeatureProvider()
-        {
-        }
-
         public GenericControllerFeatureProvider(params TypeInfo[] types)
         {
             _types = types;

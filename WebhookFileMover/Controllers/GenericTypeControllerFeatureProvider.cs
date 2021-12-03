@@ -11,7 +11,7 @@ namespace WebhookFileMover.Controllers
     {
         /// <summary>/// This is just a marker attribute used to allow us to identifier which entities to expose in the API
         /// </summary>
-        [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
+        [AttributeUsage(AttributeTargets.Class)]
         public class ApiEntityAttribute : Attribute
         {
         } // These are two example entities that will be supported by the generic controller [ApiEntityAttribute]public class Animals { } [ApiEntityAttribute]public class Insects { }
@@ -49,7 +49,7 @@ namespace WebhookFileMover.Controllers
             }
         }
 
-        [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
+        [AttributeUsage(AttributeTargets.Class)]
         public class GenericControllerNameAttribute : Attribute, IControllerModelConvention,IRouteTemplateProvider
         {
             public void Apply(ControllerModel controller)
@@ -75,7 +75,7 @@ namespace WebhookFileMover.Controllers
             
             public string Template
             {
-                get => _template ?? this.Name ?? ServiceRegistrationExtensions.RouteTemplate ?? string.Empty; //?? "api/[controller]";
+                get => _template ?? Name ?? ServiceRegistrationExtensions.RouteTemplate ?? string.Empty; //?? "api/[controller]";
                 private set => _template = value;
             }
             

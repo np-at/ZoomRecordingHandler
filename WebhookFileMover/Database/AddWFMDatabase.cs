@@ -5,9 +5,9 @@ using WebhookFileMover.Database.Models;
 
 namespace WebhookFileMover.Database
 {
-    public static class WFMDatabaseExtensions
+    public static class WfmDatabaseExtensions
     {
-        public static IServiceCollection AddWFMDatabaseConfiguration(this IServiceCollection services, string sqliteConnection)
+        public static void AddWfmDatabaseConfiguration(this IServiceCollection services, string sqliteConnection)
         {
             try
             {
@@ -23,16 +23,14 @@ namespace WebhookFileMover.Database
                 Console.WriteLine(e);
                 throw;
             }
-            return services;
         }
 
-        public static IApplicationBuilder UseWFMDatabaseBootstrap(this IApplicationBuilder app)
+        public static void UseWfmDatabaseBootstrap(this IApplicationBuilder app)
         {
             try
             {
                 var databaseBootstrap = app.ApplicationServices.GetRequiredService<IDatabaseBootstrap>();
                 databaseBootstrap.Setup();
-                return app;
             }
             catch (Exception e)
             {

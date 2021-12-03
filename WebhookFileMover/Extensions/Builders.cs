@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using WebhookFileMover.BackgroundServices;
 using WebhookFileMover.Controllers;
+using WebhookFileMover.Helpers;
 using WebhookFileMover.Models.Configurations.ConfigurationSchemas;
 using WebhookFileMover.Models.Configurations.Internal;
 using WebhookFileMover.Models.Interfaces;
@@ -16,34 +17,32 @@ using WebhookFileMover.Providers.OneDrive;
 
 namespace WebhookFileMover.Extensions
 {
-    public class WFMBuilder<T> : WFMBuilder
+    public class WfmBuilder<T> : WfmBuilder where T : class, new()
     {
-        public WFMBuilder(ref IServiceCollection serviceCollection) : base(ref serviceCollection)
+        public WfmBuilder(ref IServiceCollection serviceCollection) : base(ref serviceCollection)
         {
         }
+
         internal AppConfig? AppConfig;
 
-        internal ReceiverEndpointConfig? ReceiverEndpointConfig { get; set; }
+        internal ReceiverEndpointConfig? ReceiverEndpointConfig { get; init; }
 
-        public WFMBuilder<T> RegisterEndpointFromConfig()
+        public WfmBuilder<T> RegisterEndpointFromConfig()
         {
-            
-                if (!string.IsNullOrWhiteSpace(ReceiverEndpointConfig?.RouteSuffix))
-                    if (!ServiceRegistrationExtensions.EndpointMapping.TryAdd(typeof(T), ReceiverEndpointConfig.RouteSuffix))
-                        throw new Exception("Error while attempting to add type to Custom Endpoint Mapping");
-                // else
-                //     if (!ServiceRegistrationExtensions.EndpointMapping.TryAdd(typeof(T), endpoint))
-                //         throw new Exception("Error while attempting to add type to Custom Endpoint Mapping");
+            if (!string.IsNullOrWhiteSpace(ReceiverEndpointConfig?.RouteSuffix))
+                if (!ServiceRegistrationExtensions.EndpointMapping.TryAdd(typeof(T),
+                    ReceiverEndpointConfig.RouteSuffix))
+                    throw new Exception("Error while attempting to add type to Custom Endpoint Mapping");
             return this;
         }
 
-        public WFMBuilder<T> RegisterWebhookTransformer<TY>() where TY : class, IWebhookDownloadJobTransformer<T>
+        public WfmBuilder<T> RegisterWebhookTransformer<TY>() where TY : class, IWebhookDownloadJobTransformer<T>
         {
             ServiceCollection.TryAddTransient<IWebhookDownloadJobTransformer<T>, TY>();
             return this;
         }
 
-        public WFMBuilder<T> RegisterDownloadHandler(Action<DownloadHandlerOptions>? action = null,
+        public WfmBuilder<T> RegisterDownloadHandler(Action<DownloadHandlerOptions>? action = null,
             IDownloadJobHandler? downloadJobHandler = null)
         {
             // Setup Downloading Providers and Configurations
@@ -68,7 +67,7 @@ namespace WebhookFileMover.Extensions
             return this;
         }
 
-        public WFMBuilder<T> RegisterDefaultUploadProviders()
+        public WfmBuilder<T> RegisterDefaultUploadProviders()
         {
             // Setup upload providers
             ServiceCollection.AddTransient<OnedriveUserProvider>();
@@ -91,37 +90,60 @@ namespace WebhookFileMover.Extensions
             ServiceCollection.Configure<GenericReceiverControllerOptions<T>>(options =>
             {
                 options.ConfigIds = targetIds;
-                options.AssociatedReceiverId = _receiverId;
+                options.AssociatedReceiverId = ReceiverId;
+                options.AllowedAuthorizationHeaderValues = ReceiverEndpointConfig?.AllowedAuthorizationHeaderValues ??
+                                                           Array.Empty<string>();
+                options.ValidationTests = ReceiverEndpointConfig?.ValidationTests ?? new Dictionary<string, string>(0);
             });
-            
-            if (!string.IsNullOrWhiteSpace(AppConfig?.BaseReceiverConfig?.BaseRouteTemplate) && string.IsNullOrWhiteSpace(ServiceRegistrationExtensions.RouteTemplate))
+
+            if (!string.IsNullOrWhiteSpace(AppConfig?.BaseReceiverConfig?.BaseRouteTemplate) &&
+                string.IsNullOrWhiteSpace(ServiceRegistrationExtensions.RouteTemplate))
                 ServiceRegistrationExtensions.RouteTemplate ??= AppConfig.BaseReceiverConfig?.BaseRouteTemplate;
-            
-            
-            
+
+
             ServiceRegistrationExtensions.Types =
                 ServiceRegistrationExtensions.Types.Append(typeof(T).GetTypeInfo()).ToArray();
         }
 
         private void RegisterReceiverConfigurations()
         {
-            ServiceCollection.Configure<ResolvedReceiverConfiguration>(_receiverId, config =>
+            ServiceCollection.Configure<ResolvedReceiverConfiguration>(ReceiverId, config =>
             {
                 config.ResolvedUploadTargets = ResolveTargets();
-                config.NotificationProviderConfigs = ReceiverEndpointConfig?.NotificationProviderConfigs ??  Array.Empty<NotificationProviderConfig>();
-                config.Id = _receiverId;
+                config.NotificationProviderConfigs = ReceiverEndpointConfig?.NotificationProviderConfigs ??
+                                                     Array.Empty<NotificationProviderConfig>();
+                config.Id = ReceiverId;
             });
         }
 
         private void RegisterNotificationProviders()
         {
-            if (ReceiverEndpointConfig?.NotificationProviderConfigs.Any(x=>x.ProviderType == NotificationProviderType.SlackBot) ?? false)
-                ServiceCollection.TryAddTransient<SlackNotificationProvider>();
+            ServiceCollection.TryAddTransient<SlackNotificationProvider>();
+            if (AppConfig?.SlackApiOptions != null)
+                ServiceCollection.Configure<SlackApiOptions>(x =>
+                {
+                    x.Channel = AppConfig.SlackApiOptions.Channel;
+                    x.BotUserToken = AppConfig.SlackApiOptions.BotUserToken;
+                });
+
+            if (ReceiverEndpointConfig?.NotificationProviderConfigs?.Any(x =>
+                x.ProviderType == NotificationProviderType.Webhook) ?? false)
+                ServiceCollection.TryAddTransient<WebhookNotificationProvider>();
         }
+
+        public WfmBuilder<T> RegisterCustomTemplateResolutionFunction<S>(string functionName)
+        {
+            if (!StringUtils.AddLookupFuncToDict<S>(functionName))
+                throw new InvalidOperationException(
+                    "Error encountered while attempting to add lookup func to dictionary");
+            return this;
+        }
+
         private List<ResolvedUploadTarget> ResolveTargets()
         {
             var targets = new List<ResolvedUploadTarget>();
-            foreach (string associatedUploadTargetId in ReceiverEndpointConfig?.AssociatedUploadTargetIds ?? Array.Empty<string>())
+            foreach (string associatedUploadTargetId in ReceiverEndpointConfig?.AssociatedUploadTargetIds ??
+                                                        Array.Empty<string>())
             {
                 var associatedUploadTarget = AppConfig?.UploadTargets?.SingleOrDefault(x =>
                     x.Name?.Equals(associatedUploadTargetId, StringComparison.InvariantCultureIgnoreCase) ?? false);
@@ -130,14 +152,16 @@ namespace WebhookFileMover.Extensions
                     throw new KeyNotFoundException(
                         $"Associated Upload Target not found in ReceiverEndpointConfig {ReceiverEndpointConfig} for AssociatedUploadTargetId of {associatedUploadTargetId}");
                 var associatedUploadConfig =
-                    AppConfig?.UploadConfigs?.SingleOrDefault(x => x.Identifier?.Equals(associatedUploadTarget?.ConfigId)??false) ?? throw new KeyNotFoundException();
+                    AppConfig?.UploadConfigs?.SingleOrDefault(x =>
+                        x.Identifier?.Equals(associatedUploadTarget.ConfigId) ?? false) ??
+                    throw new KeyNotFoundException();
                 targets.Add(new ResolvedUploadTarget()
                 {
                     UploadTarget = associatedUploadTarget,
                     UploadTargetConfig = associatedUploadConfig,
-                    NotificationProviderConfig = ReceiverEndpointConfig?.NotificationProviderConfigs ?? Array.Empty<NotificationProviderConfig>()
+                    NotificationProviderConfig = ReceiverEndpointConfig?.NotificationProviderConfigs ??
+                                                 Array.Empty<NotificationProviderConfig>()
                 });
-                
             }
 
             return targets;

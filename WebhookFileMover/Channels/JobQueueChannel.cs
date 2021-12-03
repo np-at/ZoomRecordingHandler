@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using WebhookFileMover.Models;
 using WebhookFileMover.Models.Configurations.Internal;
 
@@ -58,12 +57,9 @@ namespace WebhookFileMover.Channels
         private readonly PChannel<ResolvedUploadJob> _uploadQueue;
         private readonly PChannel<Notification> _notificationQueue;
 
-        private readonly ILogger<JobQueueChannel> _logger;
 
-
-        public JobQueueChannel(ILogger<JobQueueChannel> logger)
+        public JobQueueChannel()
         {
-            _logger = logger;
             _notificationQueue = PChannel<Notification>.CreateInstance();
             _downloadQueue = PChannel<DownloadJobBatch>.CreateInstance();
             _uploadQueue = PChannel<ResolvedUploadJob>.CreateInstance();

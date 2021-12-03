@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -90,7 +89,7 @@ namespace WebhookFileMover.BackgroundServices
                     var newTaskInstance = new JobTaskInstance
                     {
                         Status = TaskInstanceStatus.Pending,
-                        JobType = resolvedUploadJob?.UploadTargetConfig.Type switch
+                        JobType = resolvedUploadJob?.UploadTargetConfig?.Type switch
                         {
                             JobType.Sharepoint => JobTaskType.UploadSharepoint,
                             JobType.OnedriveUser => JobTaskType.UploadOnedriveUser,

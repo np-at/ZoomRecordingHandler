@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.Http;
 
 namespace WebhookFileMover.Models.Configurations.ConfigurationSchemas
 {
@@ -59,12 +60,6 @@ namespace WebhookFileMover.Models.Configurations.ConfigurationSchemas
         // }
     }
 
-    public enum ReceiverType
-    {
-        Unknown,
-        ZoomWebhook
-    }
-
     public enum AuthenticationMechanism
     {
         Unknown,
@@ -82,9 +77,11 @@ namespace WebhookFileMover.Models.Configurations.ConfigurationSchemas
         public string? ModelTypeName { get; set; }
         public string[]? AssociatedUploadTargetIds { get; set; }
         public AuthenticationMechanism AuthenticationMechanism { get; set; }
+        public IEnumerable<string>? AllowedAuthorizationHeaderValues { get; set; }
 
-        public IEnumerable<NotificationProviderConfig> NotificationProviderConfigs { get; set; } =
-            Array.Empty<NotificationProviderConfig>();
+        public IEnumerable<NotificationProviderConfig>? NotificationProviderConfigs { get; set; }
+        public Dictionary<string, string>? ValidationTests { get; set; }
+
     }
 
     public class NotificationProviderConfig
@@ -94,12 +91,23 @@ namespace WebhookFileMover.Models.Configurations.ConfigurationSchemas
         public string? SuccessMessageTemplate { get; set; }
         public Dictionary<string, dynamic>? ParamBag { get; set; }
         public SlackApiOptions? SlackApiOptions { get; set; }
+
+        public WebhookOptions? WebhookOptions { get; set; }
+    }
+
+    public class WebhookOptions
+    {
+        public string[]? Endpoints { get; set; }
+        public string? BodyTemplate { get; set; }
+        public HttpMethod? HttpMethod { get; set; }
+        public Dictionary<string, string>? ExtraHeaders { get; set; }
     }
 
     public enum NotificationProviderType
     {
         Unknown,
-        SlackBot
+        SlackBot,
+        Webhook
     }
 
     public class UploadTaskDefinition

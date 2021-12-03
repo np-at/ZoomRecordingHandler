@@ -1,5 +1,4 @@
 ﻿using Dapper.Contrib.Extensions;
-using WebhookFileMover.Models.Configurations.ConfigurationSchemas;
 
 namespace WebhookFileMover.Database.Models
 {

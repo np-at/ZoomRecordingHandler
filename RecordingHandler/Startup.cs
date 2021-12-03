@@ -8,6 +8,7 @@ using WebhookFileMover.Extensions;
 using WebhookFileMover.Middleware;
 using WebhookFileMover.Models;
 using WebhookFileMover.Models.Configurations.ConfigurationSchemas;
+using WebhookFileMover.Providers.Notifications;
 
 
 namespace RecordingHandler
@@ -19,31 +20,23 @@ namespace RecordingHandler
             Configuration = configuration;
         }
 
-        public IConfiguration Configuration { get; }
+        private IConfiguration Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
             var appConfig = Configuration.GetSection("AppConfig").Get<AppConfig>();
             services.AddHealthChecks();
-            services.AddWFMDatabaseConfiguration(Configuration.GetConnectionString("Default"));
-            // services.AddControllers();
-            // services.AddTransient<IWebhookDownloadJobTransformer<ZoomWebhook>, ZoomWebhookTransformer>();
-            // services.TestAddR(new[] { typeof(ZoomWebhook).GetTypeInfo() },
-            //     Configuration.GetSection("AppConfig").Get<AppConfig>());
+            services.AddWfmDatabaseConfiguration(Configuration.GetConnectionString("Default"));
+  
             services.InitializeReceiverBuilder()
                 .RegisterReceiverConfig<ZoomWebhook>(appConfig)
                 .RegisterDownloadHandler()
                 .RegisterWebhookTransformer<ZoomWebhookTransformer>()
                 .RegisterDefaultUploadProviders()
                 .RegisterEndpointFromConfig()
+                .RegisterCustomTemplateResolutionFunction<SlackNotificationProvider>("GetUserIdAsync")
                 .Build();
-            // services.InitializeReceiverBuilder()
-            //     .RegisterReceiverConfig<ZoomWebhook>(appConfig)
-            //     .RegisterDownloadHandler()
-            //     .RegisterWebhookTransformer<ZoomWebhookTransformer>()
-            //     .RegisterDefaultUploadProviders()
-            //     .Build();
             services.FinalizeWebhookFileMoverRegistrations();
         }
 
@@ -60,7 +53,7 @@ namespace RecordingHandler
             app.UseRouting();
 
             app.UseAuthorization();
-            app.UseWFMDatabaseBootstrap();
+            app.UseWfmDatabaseBootstrap();
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
