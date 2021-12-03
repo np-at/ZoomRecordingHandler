@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using MediatR;
+﻿using MediatR;
 using ZFHandler.Mdtr.Commands;
 
 namespace ZFHandler.Controller

@@ -3,11 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
-using WebhookFileMover.Models;
 using WebhookFileMover.Models.Configurations.ConfigurationSchemas.ClientConfigs;
 using WebhookFileMover.Models.Configurations.ConfigurationSchemas.ClientConfigs.OneDrive;
 using WebhookFileMover.Models.Configurations.Internal;
@@ -33,7 +31,7 @@ namespace WebhookFileMover.Providers.OneDrive
             var gs = CreateGraphClient(resolvedUploadJob);
 
             
-            string? conflictBehavior = resolvedUploadJob.UploadTarget.FileExistsBehavior switch
+            string? conflictBehavior = resolvedUploadJob.UploadTarget?.FileExistsBehavior switch
             {
                 FileExistsBehavior.Rename => "rename",
                 FileExistsBehavior.Unknown => throw new ArgumentNullException(),
@@ -53,8 +51,8 @@ namespace WebhookFileMover.Providers.OneDrive
             var itemPath = resolvedUploadJob.GetRelativePath();
             // var sharepointSite = resolvedUploadJob.UploadTargetConfig.ClientConfig?.SiteRelativePath ?? throw new ArgumentNullException(nameof(resolvedUploadJob.UploadTargetConfig.ClientConfig.SiteRelativePath));
             var sharepointSite = await gs.Sites.GetByPath(
-                resolvedUploadJob.UploadTargetConfig.ClientConfig?.SiteRelativePath,
-                resolvedUploadJob.UploadTargetConfig.ClientConfig?.SharepointHostname).Request().GetAsync(cancellationToken);
+                resolvedUploadJob.UploadTargetConfig?.ClientConfig?.SiteRelativePath,
+                resolvedUploadJob.UploadTargetConfig?.ClientConfig?.SharepointHostname).Request().GetAsync(cancellationToken);
             
             if (sharepointSite == null)
                 throw new ArgumentException(

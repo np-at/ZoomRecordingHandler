@@ -5,6 +5,6 @@ updates:
     schedule:
       interval: daily
   - package-ecosystem: nuget
-    directory: "/ZoomFileManager/ZoomFileManager.csproj"
+    directory: "/RecordingHandler/RecordingHandler.csproj"
     schedule:
       interval: daily

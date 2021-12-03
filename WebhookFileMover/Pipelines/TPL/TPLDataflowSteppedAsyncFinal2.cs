@@ -8,7 +8,7 @@ namespace WebhookFileMover.Pipelines.TPL
 {
    public class TPLDataflowSteppedAsyncFinal2<TIn, TOut>
     {
-        private List<(IDataflowBlock Block, bool IsAsync)> _steps = new List<(IDataflowBlock Block, bool IsAsync)>();
+        private List<(IDataflowBlock Block, bool IsAsync)> _steps = new();
         public void AddStep<TLocalIn, TLocalOut>(Func<TLocalIn, TLocalOut> stepFunc)
         {
             if (_steps.Count == 0)

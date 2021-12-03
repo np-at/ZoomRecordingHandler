@@ -3,11 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
-using WebhookFileMover.Models;
 using WebhookFileMover.Models.Configurations.ConfigurationSchemas.ClientConfigs;
 using WebhookFileMover.Models.Configurations.ConfigurationSchemas.ClientConfigs.OneDrive;
 using WebhookFileMover.Models.Configurations.Internal;
@@ -25,10 +23,7 @@ namespace WebhookFileMover.Providers.OneDrive
             _logger = logger;
             _optionsSnapshot = optionsSnapshot;
         }
-
-        public override async Task UploadFileAsync(ResolvedUploadJob uploadJobSpec,
-            CancellationToken cancellationToken = default) =>
-            await PUplaod(uploadJobSpec, null, cancellationToken);
+        
         // {
         //     // var currentOptions = _optionsSnapshot.Get(configId) ?? throw new KeyNotFoundException();
         //    
@@ -39,9 +34,10 @@ namespace WebhookFileMover.Providers.OneDrive
         //  
         //     // await PUplaod(uploadJobSpec.SourceFile, itemPath, configId, null, cancellationToken);
         // }
-   
 
-        internal override async Task<IUploadSession> CreateUploadSession(ResolvedUploadJob resolvedUploadJob, CancellationToken cancellationToken = default)
+
+        internal override async Task<IUploadSession> CreateUploadSession(ResolvedUploadJob resolvedUploadJob,
+            CancellationToken cancellationToken = default)
         {
             var gs = CreateGraphClient(resolvedUploadJob);
             // var currentOptions = _optionsSnapshot.Get(configId) ?? throw new KeyNotFoundException();
@@ -49,7 +45,7 @@ namespace WebhookFileMover.Providers.OneDrive
             //                        throw new ArgumentNullException(nameof(currentOptions.DriveId));
             // string? itemPath = formattedRelativeItemPathWithName ??
             //                    throw new ArgumentNullException(nameof(formattedRelativeItemPathWithName));
-            string? conflictBehavior = resolvedUploadJob.UploadTarget.FileExistsBehavior switch
+            string? conflictBehavior = resolvedUploadJob.UploadTarget?.FileExistsBehavior switch
             {
                 FileExistsBehavior.Rename => "rename",
                 FileExistsBehavior.Unknown => throw new ArgumentNullException(),
@@ -67,7 +63,9 @@ namespace WebhookFileMover.Providers.OneDrive
                 }
             };
             var itemPath = resolvedUploadJob.GetRelativePath();
-            var driveId = (resolvedUploadJob.UploadTargetConfig.ClientConfig as OD_DriveClientConfig)?.DriveId ?? throw new ArgumentNullException(nameof(resolvedUploadJob.UploadTargetConfig.ClientConfig.DriveId));
+            var driveId = (resolvedUploadJob.UploadTargetConfig?.ClientConfig as OD_DriveClientConfig)?.DriveId ??
+                          throw new ArgumentNullException(nameof(resolvedUploadJob.UploadTargetConfig.ClientConfig
+                              .DriveId));
 
             return await gs.Drives[driveId]
                 .Root.ItemWithPath(itemPath)
@@ -76,6 +74,5 @@ namespace WebhookFileMover.Providers.OneDrive
                 .PostAsync(cancellationToken)
                 .ConfigureAwait(false);
         }
-
     }
 }

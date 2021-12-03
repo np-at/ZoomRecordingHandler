@@ -13,7 +13,6 @@ using ZFHandler.Controller;
 using ZFHandler.Mdtr.Commands;
 using ZFHandler.Mdtr.Handlers;
 using ZFHandler.Models;
-using ZFHandler.Services;
 using ZoomFileManager.Models;
 
 namespace ZoomFileManager

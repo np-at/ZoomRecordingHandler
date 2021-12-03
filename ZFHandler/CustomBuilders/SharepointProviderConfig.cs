@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Options;
-using WebhookFileMover.Models.Configurations.ConfigurationSchemas.ClientConfigs.OneDrive;
+﻿using WebhookFileMover.Models.Configurations.ConfigurationSchemas.ClientConfigs.OneDrive;
 
 namespace ZFHandler.CustomBuilders
 {

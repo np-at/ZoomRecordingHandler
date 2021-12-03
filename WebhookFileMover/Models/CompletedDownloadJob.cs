@@ -1,11 +1,10 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 
 namespace WebhookFileMover.Models
 {
     public class CompletedDownloadJob
     {
-        public string DownloadJobId { get; set; }
+        public int DownloadJobId { get; set; }
         
         public FileInfo DownloadedFile { get; set; }
         

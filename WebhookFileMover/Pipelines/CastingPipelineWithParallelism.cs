@@ -20,7 +20,7 @@ namespace WebhookFileMover.Pipelines
     public class GenericBCPipelineStep<TStepIn, TStepOut> : IPipelineStep<TStepIn>
     {
         public BlockingCollection<TStepIn> Buffer { get; set; } = new();
-        public Func<TStepIn, TStepOut> StepAction { get; set; }
+        public Func<TStepIn, TStepOut>? StepAction { get; set; }
     }
 
     public static class GenericBCPipelineExtensions
@@ -32,7 +32,7 @@ namespace WebhookFileMover.Pipelines
         {
             var pipelineStep = pipelineBuilder.GenerateStep<TInput, TOutput>();
             pipelineStep.StepAction = step;
-            return default(TOutput);
+            return default(TOutput) ?? throw new InvalidOperationException();
         }
     }
 

@@ -71,7 +71,7 @@ namespace WebhookFileMover.Providers.Download
 
                 using var response =
                     await client
-                        .SendAsync(notification.Message, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                        .SendAsync(notification.Message ?? throw new NullReferenceException(), HttpCompletionOption.ResponseHeadersRead, cancellationToken)
                         .ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
                     response.EnsureSuccessStatusCode();

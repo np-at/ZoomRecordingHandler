@@ -4,6 +4,7 @@ namespace WebhookFileMover.Models.Configurations.ConfigurationSchemas
 {
     public class UploadTarget
     {
+        public string? Name { get; set; }
         public string? ConfigId { get; set; }
         
         /// <summary>

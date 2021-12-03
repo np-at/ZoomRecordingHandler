@@ -52,7 +52,7 @@
 //             foreach (var downloadJob in JobTracker.ConcurrentDictionary.GetOrAdd(notification.Id, notification).Jobs ??
 //                                         Array.Empty<DownloadJob>())
 //             {
-//                 downloadJob.ParentJobId = notification.Id;
+//                 downloadJob.ParentJob = notification.Id;
 //                 downloadJob.Status = JobStatus.NotStarted;
 //                 JobTracker.DownloadJobs.TryAdd(downloadJob.Id, downloadJob);
 //                 var dlTask = _mediator.Send(downloadJob, cancellationToken).ConfigureAwait(false);

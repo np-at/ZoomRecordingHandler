@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,8 +7,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using WebhookFileMover.Channels;
+using WebhookFileMover.Database.Models;
 using WebhookFileMover.Models;
-using WebhookFileMover.Models.Configurations;
 using WebhookFileMover.Models.Configurations.ConfigurationSchemas;
 using WebhookFileMover.Models.Configurations.Internal;
 using WebhookFileMover.Models.Interfaces;
@@ -31,17 +27,18 @@ namespace WebhookFileMover.BackgroundServices
         private readonly IServiceProvider _serviceProvider;
         private readonly IOptionsMonitor<DownloadHandlerOptions> _optionsSnapshot;
         private readonly IOptionsMonitor<ResolvedUploadTarget>? _resolvedUploadTargetOpts;
-        private readonly ConcurrentDictionary<string, DownloadJobBatch> _downloadJobBatches = new();
+        private readonly IJobTaskInstanceRepository _taskInstanceRepository;
 
         public DownloadBrokerService(ILogger<DownloadBrokerService> logger, JobQueueChannel jobQueue,
             IServiceProvider serviceProvider, IOptionsMonitor<DownloadHandlerOptions> optionsSnapshot,
-            IOptionsMonitor<ResolvedUploadTarget>? resolvedUploadTargetOpts)
+            IOptionsMonitor<ResolvedUploadTarget>? resolvedUploadTargetOpts, IJobTaskInstanceRepository taskInstanceRepository)
         {
             _logger = logger;
             _jobQueue = jobQueue;
             _serviceProvider = serviceProvider;
             _optionsSnapshot = optionsSnapshot;
             _resolvedUploadTargetOpts = resolvedUploadTargetOpts;
+            _taskInstanceRepository = taskInstanceRepository;
         }
 
 
@@ -65,15 +62,48 @@ namespace WebhookFileMover.BackgroundServices
 
             foreach (var downloadJob in dlJob.Jobs)
             {
-                CompletedDownloadJob completedDownloadJob =
-                    await (processor?.HandleDownloadJobAsync(downloadJob, cancellationToken) ??
-                           throw new NullReferenceException());
+                CompletedDownloadJob completedDownloadJob;
+                try
+                {
+                    await _taskInstanceRepository.UpdateStatusForTaskAsync(downloadJob.Id,
+                        TaskInstanceStatus.InProgress).ConfigureAwait(false);
+                    var dlJobTask = (processor?.HandleDownloadJobAsync(downloadJob, cancellationToken) ??
+                                     throw new NullReferenceException());
+                    completedDownloadJob = await dlJobTask;
+                    completedDownloadJob.DownloadJobId = downloadJob.Id;
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "Error while processing download job");
+                    await _taskInstanceRepository.UpdateStatusForTaskAsync(downloadJob.Id, TaskInstanceStatus.Failed);
+                    throw;
+                }
+
+                await _taskInstanceRepository.UpdateStatusForTaskAsync(downloadJob.Id, TaskInstanceStatus.Finished);
                 foreach (string dlJobAssociatedUploadConfigId in dlJob.AssociatedUploadConfigIds)
                 {
-                    var resolvedUploadTarget = _resolvedUploadTargetOpts?.Get(dlJobAssociatedUploadConfigId)
-                        .CreateUploadJob(completedDownloadJob.DownloadedFile);
+                    var resolvedUploadTarget = _resolvedUploadTargetOpts?
+                            .Get(dlJobAssociatedUploadConfigId)
+                        ;
+                    var resolvedUploadJob = resolvedUploadTarget?.CreateUploadJob(completedDownloadJob);
+
+                    var newTaskInstance = new JobTaskInstance
+                    {
+                        Status = TaskInstanceStatus.Pending,
+                        JobType = resolvedUploadJob?.UploadTargetConfig.Type switch
+                        {
+                            JobType.Sharepoint => JobTaskType.UploadSharepoint,
+                            JobType.OnedriveUser => JobTaskType.UploadOnedriveUser,
+                            JobType.OnedriveDrive => JobTaskType.UploadOnedriveDrive,
+                            JobType.Dropbox => JobTaskType.UploadDropbox,
+                            _ => throw new ArgumentOutOfRangeException()
+                        },
+                        ParentJob = downloadJob.ParentJobId
+                    };
+                    await _taskInstanceRepository.Create(newTaskInstance, cancellationToken);
+                    resolvedUploadJob.AssociatedJobTaskInstanceId = newTaskInstance.Id;
                     var added = await _jobQueue.AddUploadJobAsync(
-                        resolvedUploadTarget ?? throw new InvalidOperationException(),
+                        resolvedUploadJob ?? throw new InvalidOperationException(),
                         cancellationToken);
                     if (!added)
                         throw new InvalidOperationException();
@@ -90,6 +120,10 @@ namespace WebhookFileMover.BackgroundServices
                     try
                     {
                         await ConsumeJobFromQueueAsync(cancellationToken: stoppingToken).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException ex)
+                    {
+                        _logger.LogWarning(ex, "operations cancelled");
                     }
                     catch (Exception e)
                     {

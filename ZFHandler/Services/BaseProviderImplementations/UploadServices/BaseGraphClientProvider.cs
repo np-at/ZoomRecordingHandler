@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -9,9 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
 using WebhookFileMover.Models.Configurations.ConfigurationSchemas.ClientConfigs.OneDrive;
-using ZFHandler.Helpers;
 using ZFHandler.Mdtr.Handlers;
-using ZFHandler.Models;
 
 namespace ZFHandler.Services.BaseProviderImplementations.UploadServices
 {

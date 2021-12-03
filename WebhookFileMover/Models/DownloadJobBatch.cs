@@ -5,9 +5,20 @@ namespace WebhookFileMover.Models
 {
     public class DownloadJobBatch 
     {
+        public DownloadJobBatch()
+        {
+        }
+
+        public DownloadJobBatch(IEnumerable<DownloadJob>? jobs)
+        {
+            Jobs = jobs;
+        }
+
         public IEnumerable<DownloadJob>? Jobs { get; set; }
-        public string Id { get; set; } = Guid.NewGuid().ToString("N");
+        public int Id { get; set; }
         public string AssociatedDownloadConfigId { get; init; } = string.Empty;
         public IEnumerable<string> AssociatedUploadConfigIds { get; init; } = Array.Empty<string>();
+        
+        public int JobTrackingId { get; set; }
     }
 }

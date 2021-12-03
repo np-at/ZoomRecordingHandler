@@ -34,7 +34,7 @@ jobs:
           password: ${{ secrets.password }}
 
       - run: |
-          docker build --file './ZoomFileManager/Dockerfile' --build-arg BUILD_ENV=prod --build-arg BUILD_CONFIG=Release -t '${{ secrets.registry }}/zoomfilemanager:latest' -t docker.pkg.github.com/np-at/zoomrecordinghandler/zoomfilemanager:latest ./
+          docker build --file './RecordingHandler/Dockerfile' --build-arg BUILD_ENV=prod --build-arg BUILD_CONFIG=Release -t '${{ secrets.registry }}/zoomfilemanager:latest' -t docker.pkg.github.com/np-at/zoomrecordinghandler/zoomfilemanager:latest ./
           docker push '${{ secrets.registry }}/zoomfilemanager:latest'
 
       - name: docker login

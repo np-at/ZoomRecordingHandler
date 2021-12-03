@@ -10,15 +10,12 @@ using MediatR.Registration;
 using Microsoft.Extensions.DependencyInjection;
 using ZFHandler.Controller;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using WebhookFileMover.Models.Configurations;
 using WebhookFileMover.Models.Configurations.ConfigurationSchemas;
 using WebhookFileMover.Pipelines.TPL;
 using ZFHandler.Helpers;
 using ZFHandler.Mdtr.Commands;
 using ZFHandler.Mdtr.Handlers;
 using ZFHandler.Models;
-using ZFHandler.Pipelines.Impl;
-using ZFHandler.Services;
 using ZFHandler.Services.BaseProviderImplementations.UploadServices;
 using ZoomFileManager.Models;
 
@@ -56,7 +53,7 @@ namespace ZFHandler.CustomBuilders
     public class RBuilder<T> : RBuilder
         where T : class, IRConv<T>, new()
     {
-        internal ReceiverConfig[]? _receiverConfigs;
+        internal BaseReceiverConfig[]? _receiverConfigs;
 
         internal string? _receiverEndpoint;
 
@@ -67,11 +64,11 @@ namespace ZFHandler.CustomBuilders
         {
         }
 
-        public RBuilder<T> AddReceiver(Action<ReceiverConfig> receiverConfig)
+        public RBuilder<T> AddReceiver(Action<BaseReceiverConfig> receiverConfig)
         {
             if (!String.IsNullOrEmpty(_receiverEndpoint))
                 throw new ArgumentException("Receiver Endpoint can only be specified once per config flow");
-            var config = new ReceiverConfig();
+            var config = new BaseReceiverConfig();
             receiverConfig?.Invoke(config);
             return this;
         }

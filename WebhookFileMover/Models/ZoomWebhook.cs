@@ -60,35 +60,35 @@ namespace WebhookFileMover.Models
         [JsonPropertyName("payload")]
         public Payload? Payload { get; set; }
 
-        public static IEnumerable<DownloadJob> ConvertToDownloadJobs(ZoomWebhook input)
-        {
-            if (input?.Payload?.Object?.RecordingFiles == null)
-                throw new NullReferenceException("webhook event was null somehow");
-            var downloadJobs = new List<DownloadJob>();
-            foreach (var item in input.Payload.Object.RecordingFiles)
-            {
-                var req = new HttpRequestMessage(HttpMethod.Get, item?.DownloadUrl ?? string.Empty);
-                req.Headers.Add("authorization",
-                    $"Bearer {input.DownloadToken ?? input.Payload.DownloadToken}");
-                req.Headers.Add("Accept", "*/*");
-                // req.Headers.Add("content-type", "application/json");
-                if (item == null)
-                {
-                    // Log.Error("null Recording file, wtf?");
-                    throw new Exception();
-                }
-
-                var dlJob = new DownloadJob()
-                {
-                    Message = req,
-                    DestinationFileName = NameTransformationFunc(item),
-                    DestinationFolderPath = FolderNameTransformationFunc(input)
-                };
-                downloadJobs.Add(dlJob);
-            }
-          
-            return downloadJobs;
-        }
+        // public static IEnumerable<DownloadJob> ConvertToDownloadJobs(ZoomWebhook input)
+        // {
+        //     if (input?.Payload?.Object?.RecordingFiles == null)
+        //         throw new NullReferenceException("webhook event was null somehow");
+        //     var downloadJobs = new List<DownloadJob>();
+        //     foreach (var item in input.Payload.Object.RecordingFiles)
+        //     {
+        //         var req = new HttpRequestMessage(HttpMethod.Get, item?.DownloadUrl ?? string.Empty);
+        //         req.Headers.Add("authorization",
+        //             $"Bearer {input.DownloadToken ?? input.Payload.DownloadToken}");
+        //         req.Headers.Add("Accept", "*/*");
+        //         // req.Headers.Add("content-type", "application/json");
+        //         if (item == null)
+        //         {
+        //             // Log.Error("null Recording file, wtf?");
+        //             throw new Exception();
+        //         }
+        //
+        //         var dlJob = new DownloadJob()
+        //         {
+        //             Message = req,
+        //             DestinationFileName = NameTransformationFunc(item),
+        //             DestinationFolderPath = FolderNameTransformationFunc(input)
+        //         };
+        //         downloadJobs.Add(dlJob);
+        //     }
+        //   
+        //     return downloadJobs;
+        // }
         public static ValueTask<IEnumerable<DownloadJob>> ConvertToDownloadJobAsync(ZoomWebhook input,
             CancellationToken? ct = default)
         {
@@ -99,7 +99,7 @@ namespace WebhookFileMover.Models
             {
                 var req = new HttpRequestMessage(HttpMethod.Get, item?.DownloadUrl ?? string.Empty);
                 req.Headers.Add("authorization",
-                    $"Bearer {input.DownloadToken ?? input.Payload.DownloadToken}");
+                    $"Bearer {input?.DownloadToken ?? input?.Payload?.DownloadToken ?? throw new NullReferenceException(" Authorization Download Token not found in webhook")}");
                 req.Headers.Add("Accept", "*/*");
                 // req.Headers.Add("content-type", "application/json");
                 if (item == null)
@@ -112,7 +112,7 @@ namespace WebhookFileMover.Models
                 {
                     Message = req,
                     DestinationFileName = NameTransformationFunc(item),
-                    DestinationFolderPath = FolderNameTransformationFunc(input)
+                    DestinationFolderPath = InvalidFileNameChars.Replace($"{input?.Payload?.Object?.Topic ?? "Recording"}-{input?.Payload?.Object?.HostEmail ?? input?.Payload?.AccountId ?? string.Empty}",string.Empty).Replace(' ', '_')
                 };
                 downloadJobs.Add(dlJob);
             }

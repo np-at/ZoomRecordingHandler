@@ -1,8 +1,5 @@
 using System;
 using System.IO;
-using System.Reflection;
-using MediatR;
-using MediatR.Registration;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -10,11 +7,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Serilog;
-using WebhookFileMover.Extensions;
 using WebhookFileMover.Models.Configurations.ConfigurationSchemas;
 using WebhookFileMover.Models.Interfaces;
-using ZFHandler.CustomBuilders;
-using ZFHandler.Services;
 using ZoomFileManager.Controllers;
 using ZoomFileManager.Helpers;
 using ZoomFileManager.Models;
@@ -85,7 +79,7 @@ namespace ZoomFileManager
             //     config.SlackApiOptions = appConfigOptions.SlackApiOptions;
             // });
             services.AddTransient<IWebhookDownloadJobTransformer<Zoominput>, ZoominputTransformer>();
-            services.TestAddR(new [] { typeof(Zoominput).GetTypeInfo() }, appConfigOptions);
+            // services.TestAddR(new [] { typeof(Zoominput).GetTypeInfo() }, appConfigOptions);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

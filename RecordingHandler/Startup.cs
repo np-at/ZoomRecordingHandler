@@ -1,21 +1,13 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using WebhookFileMover.Database;
 using WebhookFileMover.Extensions;
+using WebhookFileMover.Middleware;
 using WebhookFileMover.Models;
 using WebhookFileMover.Models.Configurations.ConfigurationSchemas;
-using WebhookFileMover.Models.Interfaces;
 
 
 namespace RecordingHandler
@@ -34,18 +26,24 @@ namespace RecordingHandler
         {
             var appConfig = Configuration.GetSection("AppConfig").Get<AppConfig>();
             services.AddHealthChecks();
-            
+            services.AddWFMDatabaseConfiguration(Configuration.GetConnectionString("Default"));
             // services.AddControllers();
             // services.AddTransient<IWebhookDownloadJobTransformer<ZoomWebhook>, ZoomWebhookTransformer>();
             // services.TestAddR(new[] { typeof(ZoomWebhook).GetTypeInfo() },
             //     Configuration.GetSection("AppConfig").Get<AppConfig>());
             services.InitializeReceiverBuilder()
-                .RegisterReceiver<ZoomWebhook>(appConfig)
+                .RegisterReceiverConfig<ZoomWebhook>(appConfig)
                 .RegisterDownloadHandler()
                 .RegisterWebhookTransformer<ZoomWebhookTransformer>()
                 .RegisterDefaultUploadProviders()
-                .RegisterCustomEndpoint("testing")
+                .RegisterEndpointFromConfig()
                 .Build();
+            // services.InitializeReceiverBuilder()
+            //     .RegisterReceiverConfig<ZoomWebhook>(appConfig)
+            //     .RegisterDownloadHandler()
+            //     .RegisterWebhookTransformer<ZoomWebhookTransformer>()
+            //     .RegisterDefaultUploadProviders()
+            //     .Build();
             services.FinalizeWebhookFileMoverRegistrations();
         }
 
@@ -62,11 +60,12 @@ namespace RecordingHandler
             app.UseRouting();
 
             app.UseAuthorization();
-
+            app.UseWFMDatabaseBootstrap();
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
                 endpoints.MapHealthChecks("/healthcheck");
+                endpoints.MapGraphVisualisation("/graph");
             });
         }
     }

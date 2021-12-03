@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -7,9 +6,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
-using WebhookFileMover.Models;
-using WebhookFileMover.Models.Configurations.ConfigurationSchemas;
-using WebhookFileMover.Models.Configurations.ConfigurationSchemas.ClientConfigs;
 using WebhookFileMover.Models.Configurations.ConfigurationSchemas.ClientConfigs.OneDrive;
 using WebhookFileMover.Models.Configurations.Internal;
 using WebhookFileMover.Models.Interfaces;
@@ -24,7 +20,6 @@ namespace WebhookFileMover.Providers.OneDrive
             IOptions<BaseOneDriveClientConfig> oneDriveClientConfig)
         {
             _logger = logger;
-          
         }
 
         internal abstract Task<IUploadSession> CreateUploadSession(ResolvedUploadJob resolvedUploadJob,
@@ -117,10 +112,12 @@ namespace WebhookFileMover.Providers.OneDrive
                 {
                     // ignore
                 }
+
                 _logger.LogInformation(
                     "[{Percent} % - {UploadSpeed} mb/sec]Uploaded {BytesUploaded} bytes of {TotalBytes} bytes",
-                    (100 * progress2 / fileStreamLength).ToString(), spd.ToString(), progress2.ToString(), fileStreamLength.ToString());
-               
+                    (100 * progress2 / fileStreamLength).ToString(), spd.ToString(), progress2.ToString(),
+                    fileStreamLength.ToString());
+
                 stopwatch.Restart();
                 lastProgress = progress2;
             });
@@ -152,7 +149,11 @@ namespace WebhookFileMover.Providers.OneDrive
         }
 
 
-        public virtual async Task UploadFileAsync(ResolvedUploadJob uploadJobSpec,
-            CancellationToken cancellationToken = default) => await PUplaod(uploadJobSpec, null, cancellationToken);
+        public virtual async Task<Uri?> UploadFileAsync(ResolvedUploadJob uploadJobSpec,
+            CancellationToken cancellationToken = default)
+        {
+            var result = await PUplaod(uploadJobSpec, null, cancellationToken);
+            return result.Location ?? new Uri(result.ItemResponse.WebUrl);
+        }
     }
 }

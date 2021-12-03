@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
 using ZFHandler.CustomBuilders;
-using ZFHandler.Mdtr.Handlers;
 using ZFHandler.Models;
 
 namespace ZFHandler.Services.BaseProviderImplementations.UploadServices

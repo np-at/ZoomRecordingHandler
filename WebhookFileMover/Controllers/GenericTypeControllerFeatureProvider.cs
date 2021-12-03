@@ -1,17 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
+using Microsoft.AspNetCore.Mvc.Routing;
 using WebhookFileMover.Extensions;
-using WebhookFileMover.Models;
 
 namespace WebhookFileMover.Controllers
 {
     public class GenericTypeControllerFeatureProvider
     {
-        
-        
         /// <summary>/// This is just a marker attribute used to allow us to identifier which entities to expose in the API
         /// </summary>
         [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
@@ -38,11 +35,11 @@ namespace WebhookFileMover.Controllers
                 Types = typeList;
             }
         }
-        
+
         public static class IncludedEntities2
         {
             public static IReadOnlyList<TypeInfo> TypeInfos;
-        
+
             static IncludedEntities2()
             {
                 TypeInfos = new List<TypeInfo>
@@ -53,16 +50,42 @@ namespace WebhookFileMover.Controllers
         }
 
         [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
-        public class GenericControllerNameAttribute : Attribute, IControllerModelConvention
+        public class GenericControllerNameAttribute : Attribute, IControllerModelConvention,IRouteTemplateProvider
         {
             public void Apply(ControllerModel controller)
             {
                 if (controller.ControllerType.GetGenericTypeDefinition() == typeof(GenericReceiverController<>))
                 {
                     var entityType = controller.ControllerType.GenericTypeArguments[0];
-                    controller.ControllerName = ServiceRegistrationExtensions.EndpointMapping.TryGetValue(entityType, out string? customControllerName) ? customControllerName : entityType.Name;
+                    var controllerName =
+                        ServiceRegistrationExtensions.EndpointMapping.TryGetValue(entityType,
+                            out string? customControllerName)
+                            ? customControllerName
+                            : entityType.Name;
+                    
+                    controller.ControllerName = controllerName;
+                    // this.Name ??= controllerName;
                 }
             }
+            
+            private int? _order;
+            
+            int? IRouteTemplateProvider.Order => _order;
+            private string? _template;
+            
+            public string Template
+            {
+                get => _template ?? this.Name ?? ServiceRegistrationExtensions.RouteTemplate ?? string.Empty; //?? "api/[controller]";
+                private set => _template = value;
+            }
+            
+            public int Order
+            {
+                get => _order ?? 0;
+                set => _order = value;
+            }
+            
+            public string? Name { get; set; } = null;
         }
 
 
@@ -82,7 +105,7 @@ namespace WebhookFileMover.Controllers
         //         return Content($"POST to a {typeof(T).Name} controller.");
         //     }
         // }
-        
-        
-    }
+       
+}
+    
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace WebhookFileMover.Models.Configurations.ConfigurationSchemas
 {
@@ -10,7 +11,8 @@ namespace WebhookFileMover.Models.Configurations.ConfigurationSchemas
     public class AppConfig
     {
         public string[]? AllowedTokens { get; set; }
-        public ReceiverConfig[]? ReceiverConfigs { get; set; }
+        public BaseReceiverConfig? BaseReceiverConfig { get; set; }
+        public ReceiverEndpointConfig[]? ReceiverEndpointConfigs { get; set; }
         public UploadTargetConfig[]? UploadConfigs { get; set; }
         public UploadTarget[]? UploadTargets { get; set; }
         public SlackApiOptions? SlackApiOptions { get; set; }
@@ -69,26 +71,35 @@ namespace WebhookFileMover.Models.Configurations.ConfigurationSchemas
         ZoomBearer
     }
 
-    public class ReceiverConfig
+    public class BaseReceiverConfig
     {
-        public string? ReceiverType { get; set; }
+        public string? BaseRouteTemplate { get; set; }
+    }
 
+    public class ReceiverEndpointConfig
+    {
+        public string? RouteSuffix { get; set; }
+        public string? ModelTypeName { get; set; }
+        public string[]? AssociatedUploadTargetIds { get; set; }
         public AuthenticationMechanism AuthenticationMechanism { get; set; }
 
-        public string[]? AssociatedUploadTargetIds { get; set; }
-
-        public string? IncomingRoute { get; set; }
+        public IEnumerable<NotificationProviderConfig> NotificationProviderConfigs { get; set; } =
+            Array.Empty<NotificationProviderConfig>();
     }
 
     public class NotificationProviderConfig
     {
         public NotificationProviderType ProviderType { get; set; }
+        public string? Identifier { get; set; }
+        public string? SuccessMessageTemplate { get; set; }
+        public Dictionary<string, dynamic>? ParamBag { get; set; }
+        public SlackApiOptions? SlackApiOptions { get; set; }
     }
 
     public enum NotificationProviderType
     {
         Unknown,
-        SlackWebhook
+        SlackBot
     }
 
     public class UploadTaskDefinition

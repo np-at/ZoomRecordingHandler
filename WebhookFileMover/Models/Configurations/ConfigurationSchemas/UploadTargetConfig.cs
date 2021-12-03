@@ -1,7 +1,4 @@
-﻿using WebhookFileMover.Models.Configurations.ConfigurationSchemas.ClientConfigs.Dropbox;
-using WebhookFileMover.Models.Configurations.ConfigurationSchemas.ClientConfigs.OneDrive;
-
-namespace WebhookFileMover.Models.Configurations.ConfigurationSchemas
+﻿namespace WebhookFileMover.Models.Configurations.ConfigurationSchemas
 {
     public class ClientConfig
     {

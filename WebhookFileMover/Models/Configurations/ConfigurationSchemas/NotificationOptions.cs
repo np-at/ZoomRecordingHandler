@@ -6,4 +6,9 @@
         public string? ReferralUrlBase { get; set; }
         public string[]? AllowedHostEmails { get; set; }
     }
+
+    public class NotificationProvider
+    {
+        public string Endpoint { get; set;}
+    }
 }

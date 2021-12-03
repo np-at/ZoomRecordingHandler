@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
-using WebhookFileMover.Models;
 using WebhookFileMover.Models.Configurations.ConfigurationSchemas.ClientConfigs;
 using WebhookFileMover.Models.Configurations.ConfigurationSchemas.ClientConfigs.OneDrive;
 using WebhookFileMover.Models.Configurations.Internal;
@@ -32,7 +29,7 @@ namespace WebhookFileMover.Providers.OneDrive
         {
             var gs = CreateGraphClient(resolvedUploadJob);
 
-            string? conflictBehavior = resolvedUploadJob.UploadTarget.FileExistsBehavior switch
+            string? conflictBehavior = resolvedUploadJob.UploadTarget?.FileExistsBehavior switch
             {
                 FileExistsBehavior.Rename => "rename",
                 FileExistsBehavior.Unknown => throw new ArgumentNullException(),
@@ -50,7 +47,7 @@ namespace WebhookFileMover.Providers.OneDrive
                 }
             };
             var itemPath = resolvedUploadJob.GetRelativePath();
-            var userName = resolvedUploadJob.UploadTargetConfig.ClientConfig?.UserName ?? throw new ArgumentNullException(nameof(resolvedUploadJob.UploadTargetConfig.ClientConfig.UserName));
+            var userName = resolvedUploadJob.UploadTargetConfig?.ClientConfig?.UserName ?? throw new ArgumentNullException(nameof(resolvedUploadJob.UploadTargetConfig.ClientConfig.UserName));
 
             
             return await gs.Users[userName]
@@ -60,9 +57,6 @@ namespace WebhookFileMover.Providers.OneDrive
                 .PostAsync(cancellationToken)
                 .ConfigureAwait(false);
         }
-
-        public override async Task UploadFileAsync(ResolvedUploadJob uploadJobSpec,
-            CancellationToken cancellationToken = default) => await PUplaod(uploadJobSpec, null,cancellationToken);
-
+        
     }
 }
