@@ -5,6 +5,14 @@ VisualStudioVersion = 16.0.30503.244
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZoomFileManager", "ZoomFileManager\ZoomFileManager.csproj", "{4E9148B3-20B1-4404-A808-65A67A089630}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZoomfileManager.Tests", "ZoomfileManager.Tests\ZoomfileManager.Tests.csproj", "{C17364FD-4A50-433C-A765-97C53362F58A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZFHandler", "ZFHandler\ZFHandler.csproj", "{1BB25943-D56D-456D-B7F2-16D267154260}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebhookFileMover", "WebhookFileMover\WebhookFileMover.csproj", "{A3F223CC-18D4-4F49-B4DC-EB125BBCD13A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RecordingHandler", "RecordingHandler\RecordingHandler.csproj", "{FFBCD023-9712-4A0C-B08A-29475767CE33}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,6 +26,30 @@ Global
 		{4E9148B3-20B1-4404-A808-65A67A089630}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4E9148B3-20B1-4404-A808-65A67A089630}.ReleaseSelf|Any CPU.ActiveCfg = ReleaseSelf|Any CPU
 		{4E9148B3-20B1-4404-A808-65A67A089630}.ReleaseSelf|Any CPU.Build.0 = ReleaseSelf|Any CPU
+		{C17364FD-4A50-433C-A765-97C53362F58A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C17364FD-4A50-433C-A765-97C53362F58A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C17364FD-4A50-433C-A765-97C53362F58A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C17364FD-4A50-433C-A765-97C53362F58A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C17364FD-4A50-433C-A765-97C53362F58A}.ReleaseSelf|Any CPU.ActiveCfg = Debug|Any CPU
+		{C17364FD-4A50-433C-A765-97C53362F58A}.ReleaseSelf|Any CPU.Build.0 = Debug|Any CPU
+		{1BB25943-D56D-456D-B7F2-16D267154260}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1BB25943-D56D-456D-B7F2-16D267154260}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1BB25943-D56D-456D-B7F2-16D267154260}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1BB25943-D56D-456D-B7F2-16D267154260}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1BB25943-D56D-456D-B7F2-16D267154260}.ReleaseSelf|Any CPU.ActiveCfg = Debug|Any CPU
+		{1BB25943-D56D-456D-B7F2-16D267154260}.ReleaseSelf|Any CPU.Build.0 = Debug|Any CPU
+		{A3F223CC-18D4-4F49-B4DC-EB125BBCD13A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A3F223CC-18D4-4F49-B4DC-EB125BBCD13A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A3F223CC-18D4-4F49-B4DC-EB125BBCD13A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3F223CC-18D4-4F49-B4DC-EB125BBCD13A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A3F223CC-18D4-4F49-B4DC-EB125BBCD13A}.ReleaseSelf|Any CPU.ActiveCfg = Debug|Any CPU
+		{A3F223CC-18D4-4F49-B4DC-EB125BBCD13A}.ReleaseSelf|Any CPU.Build.0 = Debug|Any CPU
+		{FFBCD023-9712-4A0C-B08A-29475767CE33}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FFBCD023-9712-4A0C-B08A-29475767CE33}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FFBCD023-9712-4A0C-B08A-29475767CE33}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FFBCD023-9712-4A0C-B08A-29475767CE33}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FFBCD023-9712-4A0C-B08A-29475767CE33}.ReleaseSelf|Any CPU.ActiveCfg = Debug|Any CPU
+		{FFBCD023-9712-4A0C-B08A-29475767CE33}.ReleaseSelf|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -21,7 +21,7 @@
         public async Task Invoke(HttpContext context)
         {
             //First, get the incoming request
-            var request = await FormatRequest(context.Request);
+            var request = await FormatRequest(context.Request).ConfigureAwait(false);
             _logger.LogDebug(request);
             //Copy a pointer to the original response body stream
             var originalBodyStream = context.Response.Body;
@@ -32,15 +32,15 @@
             context.Response.Body = responseBody;
 
             //Continue down the Middleware pipeline, eventually returning to this class
-            await _next(context);
+            await _next(context).ConfigureAwait(false);
 
             //Format the response from the server
-            var response = await FormatResponse(context.Response);
+            var response = await FormatResponse(context.Response).ConfigureAwait(false);
 
             //TODO: Save log to chosen datastore
 
             //Copy the contents of the new memory stream (which contains the response) to the original stream, which is then returned to the client.
-            await responseBody.CopyToAsync(originalBodyStream);
+            await responseBody.CopyToAsync(originalBodyStream).ConfigureAwait(false);
         }
 
         private async Task<string> FormatRequest(HttpRequest request)
@@ -54,7 +54,7 @@
             var buffer = new byte[Convert.ToInt32(request.ContentLength)];
 
             //...Then we copy the entire request stream into the new buffer.
-            await request.Body.ReadAsync(buffer, 0, buffer.Length);
+            await request.Body.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false);
 
             //We convert the byte[] into a string using UTF8 encoding...
             var bodyAsText = Encoding.UTF8.GetString(buffer);
@@ -71,7 +71,7 @@
             response.Body.Seek(0, SeekOrigin.Begin);
 
             //...and copy it into a string
-            string text = await new StreamReader(response.Body).ReadToEndAsync();
+            string text = await new StreamReader(response.Body).ReadToEndAsync().ConfigureAwait(false);
 
             //We need to reset the reader for the response so that the client can read it.
             response.Body.Seek(0, SeekOrigin.Begin);

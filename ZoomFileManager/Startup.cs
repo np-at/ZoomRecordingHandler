@@ -7,11 +7,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Serilog;
-using ZoomFileManager.BackgroundServices;
+using WebhookFileMover.Models.Configurations.ConfigurationSchemas;
+using WebhookFileMover.Models.Interfaces;
 using ZoomFileManager.Controllers;
 using ZoomFileManager.Helpers;
 using ZoomFileManager.Models;
-using ZoomFileManager.Services;
 
 namespace ZoomFileManager
 {
@@ -27,47 +27,64 @@ namespace ZoomFileManager
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            var fileProvider = new PhysicalFileProvider(Path.GetTempPath());
+
+            var appConfigOptions = Configuration.GetSection("AppConfig").Get<AppConfig>();
+            // services.Configure<BrokerServiceOptions>(o =>
+            // {
+            //     o.UploadTargetConfigs = appConfigOptions.UploadConfigs;
+            //     o.UploadTargets = appConfigOptions.UploadTargets;
+            // });
+         
+
+         
             
-            var appConfigOptions = Configuration.GetSection("AppConfig");
+            
+            
             services.AddHealthChecks();
             services.AddHttpClient();
-            services.Configure<RecordingManagementServiceOptions>(x =>
+            services.AddHttpClient("dropbox", c => { c.Timeout = TimeSpan.FromMinutes(10); });
+            // services.Configure<RecordingManagementServiceOptions>(x =>
+            // {
+            //     x.Endpoints = appConfigOptions.NotificationOptions?.Endpoints;
+            // });
+            services.Configure((Action<WebhookReceiversOptions>)(o =>
             {
-                try
-                {
-                    appConfigOptions.Bind("NotificationOptions", x);
-                }
-                catch (Exception)
-                {
-                    //ignore
-                }
-            });
-            services.Configure((Action<WebhookReceiversOptions>) (o =>
-            {
-                o.AllowedTokens = Configuration.GetSection("AppConfig").GetSection("allowedTokens").Get<string[]>();
+                o.AllowedTokens = appConfigOptions.AllowedTokens;
             }));
-            services.Configure<SlackApiOptions>(x => appConfigOptions.Bind("SlackApiOptions", x));
-            services.Configure<OdruOptions>(x => appConfigOptions.Bind("OdruOptions", x));
-            var fileProvider = new PhysicalFileProvider(Path.GetTempPath());
-            services.AddSingleton<PChannel<ZoomWebhookEvent>>();
+            // services.Configure<SlackApiOptions>(x => appConfigOptions.Bind("SlackApiOptions", x));
+            // services.Configure<OneDriveClientConfig>(x => appConfigOptions.Bind("OneDriveClientConfig", x));
             // services.AddSingleton<ProcessingChannel>();
-            services.AddHostedService<ZoomEventProcessingService>();
-            services.AddSingleton(fileProvider);
+            // services.AddHostedService<ZoomEventProcessingService>();
+            services.AddSingleton<IFileProvider>(fileProvider);
             services.AddAuthentication(o => { o.DefaultScheme = SchemesNamesConst.TokenAuthenticationDefaultScheme; })
                 .AddScheme<TokenAuthenticationOptions, TokenAuthenticationHandler>(
                     SchemesNamesConst.TokenAuthenticationDefaultScheme, _ => { });
-            services.AddTransient<OneDriveOperationsService>();
-            services.AddTransient<RecordingManagementService>();
-            services.AddTransient<OneDriveOperationsService>();
-            services.AddTransient<SlackApiHelpers>();
-
-            services.AddControllers();
+            // services.AddTransient<OneDriveOperationsService>();
+            // services.AddTransient<RecordingManagementService>();
+            // services.AddTransient<IDropboxOperations, DropboxOperationsService>();
+            // services.AddTransient<IDownloadService<Zoominput>, ZoomDownloadService>();
+            //
+            // services.AddTransient<SlackApiHelpers>();
+            //
+            // services.AddTransient(typeof(ZoomWebhookHandler));
+            // services.AddControllers();
+            // services.AddReceivers(config =>
+            // {
+            //     config.AllowedTokens = appConfigOptions.AllowedTokens;
+            //     config.NotificationOptions = appConfigOptions.NotificationOptions;
+            //     config.ReceiverConfigs = appConfigOptions.ReceiverConfigs;
+            //     config.UploadConfigs = appConfigOptions.UploadConfigs;
+            //     config.UploadTargets = appConfigOptions.UploadTargets;
+            //     config.SlackApiOptions = appConfigOptions.SlackApiOptions;
+            // });
+            services.AddTransient<IWebhookDownloadJobTransformer<Zoominput>, ZoominputTransformer>();
+            // services.TestAddR(new [] { typeof(Zoominput).GetTypeInfo() }, appConfigOptions);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -78,6 +95,7 @@ namespace ZoomFileManager
             app.UseRouting();
             app.UseAuthorization();
             app.UseAuthentication();
+            // app.UseMiddleware<RequestResponseLoggingMiddleware>();
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();

@@ -6,14 +6,63 @@
 //
 //    var coordinate = Coordinate.FromJson(jsonString);
 
+using System.Globalization;
+using System.Net.Http;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using MediatR;
+using NodaTime;
+using NodaTime.Extensions;
+using NodaTime.TimeZones;
+using WebhookFileMover.Models;
+using WebhookFileMover.Models.Interfaces;
+using ZFHandler.Controller;
+
+
 namespace ZoomFileManager.Models
 {
     using System;
     using System.Collections.Generic;
     using System.Text.Json.Serialization;
 
+    public class ZoominputTransformer : IWebhookDownloadJobTransformer<Zoominput>
+    {
+        public async ValueTask<IEnumerable<WebhookFileMover.Models.DownloadJob>> TransformWebhook(Zoominput webhook, CancellationToken cancellationToken = default)
+        {
+            if (webhook?.Payload?.Object?.RecordingFiles == null)
+                throw new NullReferenceException("webhook event was null somehow");
+            var downloadJobs = new List<DownloadJob>();
+            foreach (var item in webhook.Payload.Object.RecordingFiles)
+            {
+                var req = new HttpRequestMessage(HttpMethod.Get, item?.DownloadUrl ?? string.Empty);
+                req.Headers.Add("authorization",
+                    $"Bearer {webhook.DownloadToken ?? webhook.Payload.DownloadToken}");
+                req.Headers.Add("Accept", "*/*");
+                // req.Headers.Add("content-type", "application/json");
+                if (item == null)
+                {
+                    // Log.Error("null Recording file, wtf?");
+                    throw new Exception();
+                }
 
-    public class ZoomWebhookEvent
+                var dlJob = new DownloadJob()
+                {
+                    Message = req,
+                    DestinationFileName = Zoominput.NameTransformationFunc(item),
+                    DestinationFolderPath = Zoominput.FolderNameTransformationFunc(webhook)
+                };
+                downloadJobs.Add(dlJob);
+            }
+
+            return downloadJobs;
+        }
+    }
+
+
+    [CreateReceiver("api/test")]
+    public class Zoominput : IRConv<Zoominput>
     {
         /// <summary>
         /// Use this token along with the `download_url` to download the  Cloud Recording via an
@@ -50,6 +99,102 @@ namespace ZoomFileManager.Models
 
         [JsonPropertyName("payload")]
         public Payload Payload { get; set; }
+
+        public static IEnumerable<DownloadJob> ConvertToDownloadJobs(Zoominput input)
+        {
+            if (input?.Payload?.Object?.RecordingFiles == null)
+                throw new NullReferenceException("webhook event was null somehow");
+            var downloadJobs = new List<DownloadJob>();
+            foreach (var item in input.Payload.Object.RecordingFiles)
+            {
+                var req = new HttpRequestMessage(HttpMethod.Get, item?.DownloadUrl ?? string.Empty);
+                req.Headers.Add("authorization",
+                    $"Bearer {input.DownloadToken ?? input.Payload.DownloadToken}");
+                req.Headers.Add("Accept", "*/*");
+                // req.Headers.Add("content-type", "application/json");
+                if (item == null)
+                {
+                    // Log.Error("null Recording file, wtf?");
+                    throw new Exception();
+                }
+
+                var dlJob = new DownloadJob()
+                {
+                    Message = req,
+                    DestinationFileName = NameTransformationFunc(item),
+                    DestinationFolderPath = FolderNameTransformationFunc(input)
+                };
+                downloadJobs.Add(dlJob);
+            }
+          
+            return downloadJobs;
+        }
+        public static async ValueTask<IEnumerable<ZFHandler.Mdtr.Commands.DownloadJob>> ConvertToDownloadJobAsync(Zoominput input,
+            CancellationToken? ct = default)
+        {
+            if (input?.Payload?.Object?.RecordingFiles == null)
+                throw new NullReferenceException("webhook event was null somehow");
+            var downloadJobs = new List<ZFHandler.Mdtr.Commands.DownloadJob>();
+            foreach (var item in input.Payload.Object.RecordingFiles)
+            {
+                var req = new HttpRequestMessage(HttpMethod.Get, item?.DownloadUrl ?? string.Empty);
+                req.Headers.Add("authorization",
+                    $"Bearer {input.DownloadToken ?? input.Payload.DownloadToken}");
+                req.Headers.Add("Accept", "*/*");
+                // req.Headers.Add("content-type", "application/json");
+                if (item == null)
+                {
+                    // Log.Error("null Recording file, wtf?");
+                    throw new Exception();
+                }
+
+                var dlJob = new ZFHandler.Mdtr.Commands.DownloadJob()
+                {
+                    message = req,
+                    DestinationFileName = NameTransformationFunc(item),
+                    DestinationFolderPath = FolderNameTransformationFunc(input)
+                };
+                downloadJobs.Add(dlJob);
+            }
+          
+            return downloadJobs;
+            
+        }
+
+        private static readonly Regex _invalidFileNameChars = new("[\\\\/:\"*?<>|'`]+");
+
+        internal static  string FolderNameTransformationFunc(Zoominput webhookEvent)
+        {
+            DateTimeZone usingTimeZone;
+            try
+            {
+                usingTimeZone =
+                    DateTimeZoneProviders.Tzdb[webhookEvent.Payload?.Object?.Timezone ?? "America/Los_Angeles"];
+            }
+            catch (DateTimeZoneNotFoundException)
+            {
+                usingTimeZone = DateTimeZoneProviders.Tzdb["America/Los_Angeles"];
+            }
+
+            var offset =
+                usingTimeZone.GetUtcOffset(webhookEvent.Payload?.Object?.StartTime.ToInstant() ?? new Instant());
+            var offsetSpan = offset.ToTimeSpan();
+            string st =
+                $"{webhookEvent?.Payload?.Object?.StartTime.UtcDateTime.Add(offsetSpan).ToString("yy_MM_dd-HHmm-", CultureInfo.InvariantCulture)}{webhookEvent?.Payload?.Object?.Topic ?? "Recording"}-{webhookEvent?.Payload?.Object?.HostEmail ?? webhookEvent?.Payload?.AccountId ?? string.Empty}";
+            return _invalidFileNameChars.Replace(st, string.Empty).Replace(" ", "_");
+        }
+
+        internal static string NameTransformationFunc(RecordingFile recordingFile)
+        {
+            var sb = new StringBuilder();
+            sb.Append(recordingFile?.Id ?? recordingFile?.FileType ?? string.Empty);
+            sb.Append(
+                recordingFile?.RecordingStart.ToLocalTime().ToString("T", CultureInfo.InvariantCulture) ?? "_");
+            sb.Append($".{recordingFile?.FileType}");
+
+            return _invalidFileNameChars.Replace(sb.ToString(), string.Empty).Replace(" ", "_");
+        }
+        
     }
 
     public partial class Payload

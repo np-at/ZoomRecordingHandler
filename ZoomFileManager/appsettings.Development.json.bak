@@ -1,21 +1,27 @@
 {
+  "$schema": "json_schemas/odru-appsettings-schema.json",
   "AppConfig": {
-    "allowedTokens": [],
-    "OdruOptions": {
-      "ClientId": "",
-      "ClientSecret": "",
-      "TenantId": "",
-      "UserName": "",
-      "RootDirectory": ""
-    },
-    "NotificationOptions": {
-      "Endpoints": [],
-      "ReferralUrlBase": "",
-      "AllowedHostEmails": []
-    },
-    "SlackApiOptions": {
-      "BotUserToken": ""
-    }
+    
+    "UploadConfigs": [
+      {
+        "Identifier": "OD",
+        "Type": "OnedriveDrive",
+        "RootPath": "",
+        "NameTemplateString": "%T-%N",
+        "ClientConfig": {
+          "ClientId": "",
+          "DriveId": "",
+          "TenantId": "",
+          "ClientSecret": ""
+        }
+      }
+    ],
+    "UploadTargets": [
+      {
+        "ConfigId": "OD",
+        "RelativeUploadPath": "/"
+      }
+    ]
   },
   "Logging": {
     "LogLevel": {
@@ -27,6 +33,7 @@
   },
   "AllowedHosts": "*",
   "Serilog": {
+    "Using": [],
     "MinimumLevel": "Verbose",
     "WriteTo": [
       {
@@ -54,8 +61,8 @@
           ]
         }
       }
-    ]
-  ,"Enrich": [ "FromLogContext", "WithMachineName", "WithExceptionDetails" ],
+    ],
+    "Enrich": [ "FromLogContext", "WithMachineName", "WithExceptionDetails" ],
     "Properties": {
       "ApplicationName": "SampleApp",
       "Environment": "Int"

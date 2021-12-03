@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using Microsoft.Extensions.FileProviders;
 
-namespace ZoomFileManager.Helpers
+namespace ZFHandler.Helpers
 {
     public static class FileHelpers
     {
