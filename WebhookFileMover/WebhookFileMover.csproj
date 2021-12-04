@@ -5,6 +5,13 @@
         <OutputType>Library</OutputType>
         <Nullable>enable</Nullable>
     </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+        <PlatformTarget>x64</PlatformTarget>
+        <DebugSymbols>false</DebugSymbols>
+        <DebugType>none</DebugType>
+        <Optimize>true</Optimize>
+    </PropertyGroup>
     <ItemGroup Condition=" '$(Configuration)' == 'Debug' ">
         <PackageReference Include="Newtonsoft.Json.Schema" Version="3.0.14" />
     </ItemGroup>

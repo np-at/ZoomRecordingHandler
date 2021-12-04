@@ -77,33 +77,7 @@ namespace WebhookFileMover.Extensions
             return this;
         }
 
-        public void Build()
-        {
-            // Resolve and add target configs
-            // var targetIds = ServiceCollection.AddWFConfiguration(AppConfig).Select(x => x.Id);
-            RegisterReceiverConfigurations();
-            RegisterNotificationProviders();
-            var targets = this.ResolveTargets();
-            var targetIds = targets.Select(x => x.Id);
-            ServiceRegistrationExtensions.UploadTargets.AddRange(targets);
-
-            ServiceCollection.Configure<GenericReceiverControllerOptions<T>>(options =>
-            {
-                options.ConfigIds = targetIds;
-                options.AssociatedReceiverId = ReceiverId;
-                options.AllowedAuthorizationHeaderValues = ReceiverEndpointConfig?.AllowedAuthorizationHeaderValues ??
-                                                           Array.Empty<string>();
-                options.ValidationTests = ReceiverEndpointConfig?.ValidationTests ?? new Dictionary<string, string>(0);
-            });
-
-            if (!string.IsNullOrWhiteSpace(AppConfig?.BaseReceiverConfig?.BaseRouteTemplate) &&
-                string.IsNullOrWhiteSpace(ServiceRegistrationExtensions.RouteTemplate))
-                ServiceRegistrationExtensions.RouteTemplate ??= AppConfig.BaseReceiverConfig?.BaseRouteTemplate;
-
-
-            ServiceRegistrationExtensions.Types =
-                ServiceRegistrationExtensions.Types.Append(typeof(T).GetTypeInfo()).ToArray();
-        }
+       
 
         private void RegisterReceiverConfigurations()
         {
@@ -165,6 +139,33 @@ namespace WebhookFileMover.Extensions
             }
 
             return targets;
+        }
+        public void Build()
+        {
+            // Resolve and add target configs
+            // var targetIds = ServiceCollection.AddWFConfiguration(AppConfig).Select(x => x.Id);
+            RegisterReceiverConfigurations();
+            RegisterNotificationProviders();
+            var targets = this.ResolveTargets();
+            var targetIds = targets.Select(x => x.Id);
+            ServiceRegistrationExtensions.UploadTargets.AddRange(targets);
+
+            ServiceCollection.Configure<GenericReceiverControllerOptions<T>>(options =>
+            {
+                options.ConfigIds = targetIds;
+                options.AssociatedReceiverId = ReceiverId;
+                options.AllowedAuthorizationHeaderValues = ReceiverEndpointConfig?.AllowedAuthorizationHeaderValues ??
+                                                           Array.Empty<string>();
+                options.ValidationTests = ReceiverEndpointConfig?.ValidationTests ?? new Dictionary<string, string>(0);
+            });
+
+            if (!string.IsNullOrWhiteSpace(AppConfig?.BaseReceiverConfig?.BaseRouteTemplate) &&
+                string.IsNullOrWhiteSpace(ServiceRegistrationExtensions.RouteTemplate))
+                ServiceRegistrationExtensions.RouteTemplate ??= AppConfig.BaseReceiverConfig?.BaseRouteTemplate;
+
+
+            ServiceRegistrationExtensions.Types =
+                ServiceRegistrationExtensions.Types.Append(typeof(T).GetTypeInfo()).ToArray();
         }
     }
     //

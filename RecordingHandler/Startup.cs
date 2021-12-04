@@ -5,11 +5,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using WebhookFileMover.Database;
 using WebhookFileMover.Extensions;
-using WebhookFileMover.Middleware;
 using WebhookFileMover.Models;
 using WebhookFileMover.Models.Configurations.ConfigurationSchemas;
 using WebhookFileMover.Providers.Notifications;
 
+#if DEBUG
+using WebhookFileMover.Middleware;
+#endif
 
 namespace RecordingHandler
 {
@@ -58,7 +60,9 @@ namespace RecordingHandler
             {
                 endpoints.MapControllers();
                 endpoints.MapHealthChecks("/healthcheck");
+#if DEBUG
                 endpoints.MapGraphVisualisation("/graph");
+#endif
             });
         }
     }

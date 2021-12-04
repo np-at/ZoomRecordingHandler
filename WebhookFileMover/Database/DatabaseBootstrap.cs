@@ -4,7 +4,6 @@ using System.Linq;
 using Dapper;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
-using SlackAPI;
 
 namespace WebhookFileMover.Database
 {

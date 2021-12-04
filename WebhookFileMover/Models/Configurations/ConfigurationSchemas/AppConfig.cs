@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Net.Http;
 
 namespace WebhookFileMover.Models.Configurations.ConfigurationSchemas
@@ -7,6 +6,8 @@ namespace WebhookFileMover.Models.Configurations.ConfigurationSchemas
 #if DEBUG
     using Newtonsoft.Json.Schema;
     using Newtonsoft.Json.Schema.Generation;
+    using System;
+
 #endif
 
     public class AppConfig
