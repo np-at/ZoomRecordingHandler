@@ -1,8 +1,10 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using Dapper;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
+using SlackAPI;
 
 namespace WebhookFileMover.Database
 {
@@ -21,8 +23,19 @@ namespace WebhookFileMover.Database
         {
             try
             {
+                
                 using var connection = new SqliteConnection(_databaseConfig.Name);
-
+                try
+                {
+                    var fi = new FileInfo(connection.DataSource);
+                    if  (!fi.Directory?.Exists ?? false)
+                        fi.Directory?.Create();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    throw;
+                }
 
 #if DEBUG
                 connection.Execute(@"drop table if exists JobTaskInstances;
