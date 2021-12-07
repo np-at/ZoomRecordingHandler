@@ -137,7 +137,7 @@ namespace WebhookFileMover.Helpers
 
         public static readonly (char, string)[] DefaultTemplateVals =
         {
-            ('D', DateTime.Now.ToString("yyyy_MM_dd-HHmm"))
+            ('D', DateTime.Now.ToString("yy_MM_dd-HHmm"))
         };
 
 
